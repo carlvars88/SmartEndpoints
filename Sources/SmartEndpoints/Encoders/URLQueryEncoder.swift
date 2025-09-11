@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct URLQueryEncoder<P: Encodable & Sendable>: ParameterEncoder, Sendable {
+public struct URLQueryEncoder<P: Encodable & Sendable>: QueryParameterEncoder, Sendable {
     
     public func encode(_ params: P, into components: inout URLComponents) throws {
         guard !(P.self is None.Type) else { return }

@@ -6,7 +6,7 @@
 //
 
 import XCTest
-@testable import SmartEndpoins
+@testable import SmartEndpoints
 
 final class MultipartBodyEncoderTests: XCTestCase {
 
@@ -44,7 +44,7 @@ final class MultipartBodyEncoderTests: XCTestCase {
         let pngBytes: [UInt8] = [0x89, 0x50, 0x4E, 0x47] // minimal PNG signature prefix
         let pngData = Data(pngBytes)
 
-        let body = DummyBody(
+        let body = (
             fields: [("username", "carlos"), ("note", "line1\nline2")],
             files: [
                 MultipartFile(name: "avatar", filename: "me.txt", mimeType: "text/plain", data: textFileData),
@@ -52,9 +52,7 @@ final class MultipartBodyEncoderTests: XCTestCase {
             ]
         )
 
-        let encoder = MultipartBodyEncoder<DummyBody> { b in
-            (fields: b.fields, files: b.files)
-        }
+        let encoder = MultipartBodyEncoder()
 
         var request = makeRequest()
 
@@ -124,14 +122,12 @@ final class MultipartBodyEncoderTests: XCTestCase {
 
     func testEncode_OrderIsFieldsThenFiles() throws {
         // Given
-        let body = DummyBody(
+        let body = (
             fields: [("a", "1"), ("b", "2")],
             files: [MultipartFile(name: "f", filename: "x.txt", mimeType: "text/plain", data: Data("X".utf8))]
         )
 
-        let encoder = MultipartBodyEncoder<DummyBody> { b in
-            (fields: b.fields, files: b.files)
-        }
+        let encoder = MultipartBodyEncoder()
 
         var request = makeRequest()
 
@@ -150,18 +146,7 @@ final class MultipartBodyEncoderTests: XCTestCase {
         XCTAssertTrue(fieldAIndex < fieldBIndex && fieldBIndex < fileIndex, "Fields should precede files in the encoded body")
     }
 
-    func testEncode_PropagatesBuildError() {
-        enum TestError: Error { case boom }
 
-        let encoder = MultipartBodyEncoder<DummyBody> { _ in
-            throw TestError.boom
-        }
-
-        var request = makeRequest()
-        XCTAssertThrowsError(try encoder.encode(DummyBody(fields: [], files: []), into: &request)) { error in
-            XCTAssertTrue(error is TestError)
-        }
-    }
 }
 
 // MARK: - Data helpers

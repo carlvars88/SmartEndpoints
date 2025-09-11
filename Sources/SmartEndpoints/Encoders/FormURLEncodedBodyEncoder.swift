@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct FormURLEncodedBodyEncoder<B: Encodable & Sendable>: BodyEncoder, Sendable {
+public struct FormURLEncodedBodyEncoder<B: Encodable & Sendable>: RequestBodyEncoder, Sendable {
     // RFC 3986 unreserved: ALPHA / DIGIT / "-" / "." / "_" / "~"
     private let unreserved = CharacterSet.alphanumerics.union(.init(charactersIn: "-._~"))
 
@@ -52,5 +52,7 @@ public struct FormURLEncodedBodyEncoder<B: Encodable & Sendable>: BodyEncoder, S
         urlRequest.httpBody = httpBody
         urlRequest.setValue("application/x-www-form-urlencoded; charset=utf-8",
                             forHTTPHeaderField: "Content-Type")
+        urlRequest.setValue(String(httpBody.count),
+                            forHTTPHeaderField: "Content-Length")
     }
 }

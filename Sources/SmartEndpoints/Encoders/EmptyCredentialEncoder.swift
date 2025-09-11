@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct EmptyCredentialsEncoder: CredentialsEncoder, Sendable {
+public struct EmptyCredentialsEncoder: RequestCredentialsEncoder, Sendable {
     public static let shared = Self()
     public func encode(_ credentials: None) throws -> [String: String] { [:] }
 }

@@ -7,20 +7,20 @@
 
 import Foundation
 
-public protocol CredentialsEncoder<Credentials>: Sendable where Credentials: Sendable {
+public protocol RequestCredentialsEncoder<Credentials>: Sendable where Credentials: Sendable {
     associatedtype Credentials
     func encode(_ credentials: Credentials) throws -> [String: String]
     
 }
 
-public struct BearerCredentialEncoder: CredentialsEncoder {
+public struct BearerCredentialEncoder: RequestCredentialsEncoder {
     public static let shared = Self()
     public func encode(_ credentials: String) throws -> [String: String] {
         return ["Authorization": "Bearer \(credentials)"]
     }
 }
 
-public struct BasicCredentialsEncoder: CredentialsEncoder, Sendable {
+public struct BasicCredentialsEncoder: RequestCredentialsEncoder, Sendable {
     public static let shared = Self()
     
     public struct Credentials: Sendable {

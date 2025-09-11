@@ -7,12 +7,12 @@
 
 import Foundation
 
-public protocol API: Sendable {
+public protocol APIProtocol: Sendable {
     static var baseUrl: String { get }
     static var defaultHeaders: [String: String] { get }
 }
 
-public extension API {
+public extension APIProtocol {
     static var defaultHeaders: [String: String] {
         [:]
     }

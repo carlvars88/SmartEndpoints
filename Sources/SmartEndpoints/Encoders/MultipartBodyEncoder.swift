@@ -15,7 +15,7 @@ public struct MultipartFile: Sendable {
     }
 }
 
-public struct MultipartBodyEncoder: BodyEncoder {
+public struct MultipartBodyEncoder: RequestBodyEncoder {
     public typealias Parts = (fields: [(String, String)], files: [MultipartFile])
     
     public static let shared = Self()

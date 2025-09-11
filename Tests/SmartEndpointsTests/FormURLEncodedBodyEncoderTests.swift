@@ -6,7 +6,7 @@
 //
 
 import XCTest
-@testable import SmartEndpoins
+@testable import SmartEndpoints
 
 
 final class FormURLEncodedBodyEncoderTests: XCTestCase {
@@ -16,6 +16,11 @@ final class FormURLEncodedBodyEncoderTests: XCTestCase {
     struct LoginForm: Encodable, Sendable {
         let username: String
         let password: String
+        
+        enum CodingKeys: String, CodingKey {
+            case username = "user_name"
+            case password = "pass_word"
+        }
     }
 
     struct ComplexForm: Encodable, Sendable {
@@ -49,7 +54,7 @@ final class FormURLEncodedBodyEncoderTests: XCTestCase {
         // UTF-8 body present
         let body = try XCTUnwrap(bodyString(request))
         // Order is not guaranteed; assert membership
-        XCTAssertTrue(containsAll(body, ["username=john", "password=s3cr3t"]),
+        XCTAssertTrue(containsAll(body, ["user_name=john", "pass_word=s3cr3t"]),
                       "Body should contain both key-value pairs. Got: \(body)")
     }
 
