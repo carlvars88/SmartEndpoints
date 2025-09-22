@@ -7,7 +7,7 @@
 
 import Foundation
 public protocol NetworkClient {
-    func send<R: Requestable>(_ request: R) async throws -> R.E.Output
+    func send<R: Requestable>(_ request: R) async throws -> (R.E.Output, HTTPURLResponse)
 }
 
 extension NetworkClient {
