@@ -97,3 +97,40 @@ public extension Request where E.BodyEncoder == EmptyBodyEncoder,
     }
 }
 
+extension Requestable {
+    func asURLRequest() throws -> URLRequest {
+        let endpoint = self.endpoint
+        
+        guard let url = URL(string: self.endpoint.api.baseUrl) else {
+            throw URLError(.badURL)
+        }
+        
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            throw URLError(.badURL)
+        }
+        components.path = endpoint.path.value
+        try endpoint.parameterEncoder.encode(self.queryParams, into: &components)
+        // 2. Build URLRequest
+        guard let componentURL = components.url else {
+            throw URLError(.badURL)
+        }
+        var urlRequest = URLRequest(url: componentURL)
+        urlRequest.httpMethod = endpoint.method.rawValue
+        // Add default headers
+        for (key, value) in self.endpoint.api.defaultHeaders {
+            urlRequest.addValue(value, forHTTPHeaderField: key)
+        }
+        
+        // Encode credentials
+        let credentialHeaders = try endpoint.credentialsEncoder.encode(self.credentials)
+        for (key, value) in credentialHeaders {
+            urlRequest.addValue(value, forHTTPHeaderField: key)
+        }
+        
+        // Encode body
+        try endpoint.bodyEncoder.encode(self.body, into: &urlRequest)
+        
+        return urlRequest
+    }
+}
+
