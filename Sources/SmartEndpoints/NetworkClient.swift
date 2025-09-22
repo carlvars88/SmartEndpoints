@@ -8,6 +8,7 @@
 import Foundation
 public protocol NetworkClient {
     func send<R: Requestable>(_ request: R) async throws -> (R.E.Output, HTTPURLResponse)
+    func buildRequest<R: Requestable>(request: R, headers: [String: String]) throws -> URLRequest
 }
 
 extension NetworkClient {
