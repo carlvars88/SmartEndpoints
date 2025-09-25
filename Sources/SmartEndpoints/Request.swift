@@ -98,7 +98,7 @@ public extension Request where E.BodyEncoder == EmptyBodyEncoder,
 }
 
 extension Requestable {
-    func asURLRequest() throws -> URLRequest {
+    public func asURLRequest() throws -> URLRequest {
         let endpoint = self.endpoint
         
         guard let url = URL(string: self.endpoint.api.baseUrl) else {
