@@ -13,6 +13,7 @@ public protocol Requestable: Sendable {
     var queryParams: E.ParametersEncoder.Parameters { get }
     var body: E.BodyEncoder.Body { get }
     var credentials: E.CredentialsEncoder.Credentials { get }
+    var headers: HTTPHeaders { get }
 }
 
 
@@ -21,12 +22,14 @@ public struct Request<E: Endpoint>: Requestable {
     public let queryParams: E.ParametersEncoder.Parameters
     public let body: E.BodyEncoder.Body
     public let credentials: E.CredentialsEncoder.Credentials
+    public let headers: HTTPHeaders
     
-    init(endpoint: E, queryParams: E.ParametersEncoder.Parameters, body: E.BodyEncoder.Body, credentials: E.CredentialsEncoder.Credentials) {
+    init(endpoint: E, queryParams: E.ParametersEncoder.Parameters, body: E.BodyEncoder.Body, credentials: E.CredentialsEncoder.Credentials, headers: HTTPHeaders = .init()) {
         self.endpoint = endpoint
         self.queryParams = queryParams
         self.body = body
         self.credentials = credentials
+        self.headers = headers
     }
 }
 
@@ -38,62 +41,92 @@ public extension Request where
     E.BodyEncoder == EmptyBodyEncoder,
     E.CredentialsEncoder == EmptyCredentialsEncoder
 {
-    init(endpoint: E) {
+    init(endpoint: E, headers: HTTPHeaders = .init()) {
         self.init(endpoint: endpoint,
                   queryParams: .init(),
                   body: .init(),
-                  credentials: .init())
+                  credentials: .init(),
+                  headers: headers)
     }
 }
 
 public extension Request where E.ParametersEncoder == EmptyParametersEncoder {
-    init(endpoint: E, body: E.BodyEncoder.Body, credentials: E.CredentialsEncoder.Credentials) {
-        self.init(endpoint: endpoint, queryParams: .init(), body: body, credentials: credentials)
+    init(endpoint: E, body: E.BodyEncoder.Body,
+         credentials: E.CredentialsEncoder.Credentials,
+         headers: HTTPHeaders = .init()) {
+        self.init(endpoint: endpoint,
+                  queryParams: .init(),
+                  body: body,
+                  credentials: credentials,
+                  headers: headers)
     }
 }
 
 public extension Request where E.BodyEncoder == EmptyBodyEncoder {
-    init(endpoint: E, query: E.ParametersEncoder.Parameters, credentials: E.CredentialsEncoder.Credentials) {
-        self.init(endpoint: endpoint, queryParams: query, body: .init(), credentials: credentials)
+    init(endpoint: E,
+         query: E.ParametersEncoder.Parameters,
+         credentials: E.CredentialsEncoder.Credentials,
+         headers: HTTPHeaders = .init()) {
+        self.init(endpoint: endpoint,
+                  queryParams: query,
+                  body: .init(),
+                  credentials: credentials,
+                  headers: headers)
     }
 }
 
 public extension Request where E.CredentialsEncoder == EmptyCredentialsEncoder {
-    init(endpoint: E, query:  E.ParametersEncoder.Parameters, body: E.BodyEncoder.Body) {
-        self.init(endpoint: endpoint, queryParams: query, body: body, credentials: .init())
+    init(endpoint: E,
+         query:  E.ParametersEncoder.Parameters,
+         body: E.BodyEncoder.Body,
+         headers: HTTPHeaders = .init()) {
+        self.init(endpoint: endpoint,
+                  queryParams: query,
+                  body: body,
+                  credentials: .init(),
+                  headers: headers)
     }
 }
 
 // Parameters & Body empty
 public extension Request where E.ParametersEncoder == EmptyParametersEncoder,
-                              E.BodyEncoder == EmptyBodyEncoder {
-    init(endpoint: E, credentials: E.CredentialsEncoder.Credentials) {
+                               E.BodyEncoder == EmptyBodyEncoder {
+    init(endpoint: E,
+         credentials: E.CredentialsEncoder.Credentials,
+         headers: HTTPHeaders = .init()) {
         self.init(endpoint: endpoint,
                   queryParams: None(),
                   body: None(),
-                  credentials: credentials)
+                  credentials: credentials,
+                  headers: headers)
     }
 }
 
 // Parameters & Credentials empty
 public extension Request where E.ParametersEncoder == EmptyParametersEncoder,
-                              E.CredentialsEncoder == EmptyCredentialsEncoder {
-    init(endpoint: E, body: E.BodyEncoder.Body) {
+                               E.CredentialsEncoder == EmptyCredentialsEncoder {
+    init(endpoint: E,
+         body: E.BodyEncoder.Body,
+         headers: HTTPHeaders = .init()) {
         self.init(endpoint: endpoint,
                   queryParams: None(),
                   body: body,
-                  credentials: None())
+                  credentials: None(),
+                  headers: headers)
     }
 }
 
 // Body & Credentials empty
 public extension Request where E.BodyEncoder == EmptyBodyEncoder,
-                              E.CredentialsEncoder == EmptyCredentialsEncoder {
-    init(endpoint: E, queryParams: E.ParametersEncoder.Parameters) {
+                               E.CredentialsEncoder == EmptyCredentialsEncoder {
+    init(endpoint: E,
+         queryParams: E.ParametersEncoder.Parameters,
+         headers: HTTPHeaders = .init()) {
         self.init(endpoint: endpoint,
                   queryParams: queryParams,
                   body: None(),
-                  credentials: None())
+                  credentials: None(),
+                  headers: headers)
     }
 }
 
@@ -115,19 +148,13 @@ extension Requestable {
             throw URLError(.badURL)
         }
         var urlRequest = URLRequest(url: componentURL)
-        urlRequest.httpMethod = endpoint.method.rawValue
-        // Add default headers
-        for (key, value) in self.endpoint.api.defaultHeaders {
-            urlRequest.addValue(value, forHTTPHeaderField: key)
-        }
+        urlRequest.method = endpoint.method
         
-        // Encode credentials
+        let headers = self.headers.merge(self.endpoint.api.defaultHeaders)
+        
         let credentialHeaders = try endpoint.credentialsEncoder.encode(self.credentials)
-        for (key, value) in credentialHeaders {
-            urlRequest.addValue(value, forHTTPHeaderField: key)
-        }
         
-        // Encode body
+        urlRequest.headers = headers.merge(credentialHeaders, preferExisting: false)
         try endpoint.bodyEncoder.encode(self.body, into: &urlRequest)
         
         return urlRequest

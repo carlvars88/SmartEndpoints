@@ -18,8 +18,8 @@ final class FormURLEncodedBodyEncoderTests: XCTestCase {
         let password: String
         
         enum CodingKeys: String, CodingKey {
-            case username = "user_name"
-            case password = "pass_word"
+            case username = "username"
+            case password = "password"
         }
     }
 

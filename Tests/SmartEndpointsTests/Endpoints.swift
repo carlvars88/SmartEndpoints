@@ -25,35 +25,35 @@ extension EZIndentityServiceAPI {
         typealias ParametersEncoder =  URLQueryEncoder<Parameters>
         typealias BodyEncoder = EmptyBodyEncoder
         let path = Path("/oauth2/authorize")
-        let method: HTTMethod = .GET
+        let method: HTTPMethod = .get
     }
     
     struct ValidateUsernameEndpoint: EZIndentityServiceAPIEndpoint {
         typealias ParametersEncoder = EmptyParametersEncoder
         typealias BodyEncoder = FormURLEncodedBodyEncoder<Body>
         let path = Path("/commonauth")
-        let method: HTTMethod = .POST
+        let method: HTTPMethod = .post
     }
     
     struct ValidatePasswordEndpoint: EZIndentityServiceAPIEndpoint {
         typealias ParametersEncoder = EmptyParametersEncoder
         typealias BodyEncoder = FormURLEncodedBodyEncoder<Body>
         let path = Path("/commonauth")
-        let method: HTTMethod = .POST
+        let method: HTTPMethod = .post
     }
     
     struct ValidateTOTPEndpoint: EZIndentityServiceAPIEndpoint {
         typealias ParametersEncoder = EmptyParametersEncoder
         typealias BodyEncoder = FormURLEncodedBodyEncoder<Body>
         let path = Path("/commonauth")
-        let method: HTTMethod = .POST
+        let method: HTTPMethod = .post
     }
     
     struct ValidateSMSTOTPEndpoint: EZIndentityServiceAPIEndpoint {
         typealias ParametersEncoder = EmptyParametersEncoder
         typealias BodyEncoder = FormURLEncodedBodyEncoder<Body>
         let path = Path("/commonauth")
-        let method: HTTMethod = .POST
+        let method: HTTPMethod = .post
     }
 }
 

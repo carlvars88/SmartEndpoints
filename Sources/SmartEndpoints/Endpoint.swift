@@ -20,7 +20,7 @@ public protocol Endpoint: Sendable {
     
     var api: API.Type { get }
     var path: Path { get }
-    var method: HTTMethod { get }
+    var method: HTTPMethod { get }
     var parameterEncoder: ParametersEncoder { get }
     var bodyEncoder: BodyEncoder { get }
     var responseDecoder: ResultDecoder { get }

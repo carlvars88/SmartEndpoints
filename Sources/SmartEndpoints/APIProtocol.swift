@@ -9,11 +9,11 @@ import Foundation
 
 public protocol APIProtocol: Sendable {
     static var baseUrl: String { get }
-    static var defaultHeaders: [String: String] { get }
+    static var defaultHeaders: HTTPHeaders { get }
 }
 
 public extension APIProtocol {
-    static var defaultHeaders: [String: String] {
-        [:]
+    static var defaultHeaders: HTTPHeaders {
+        .init()
     }
 }
