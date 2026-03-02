@@ -1,15 +1,17 @@
 //
 //  File.swift
-//  SmartEndpoins
+//  SmartEndpoints
 //
 //  Created by MacBook Pro on 8/22/25.
 //
 
 import Foundation
 
-public protocol ResponseDecoder<Output>: Sendable where Output: Sendable {
-    associatedtype Output
-    func decode(_ data: Data, _ response: HTTPURLResponse) throws -> Output
+public protocol ResponseDecoder<Result>: Sendable where Result: Sendable {
+    associatedtype Result
+    func decode(_ data: Data, _ response: HTTPURLResponse) throws -> Result
     
     var acceptHeader: String? { get }
 }
+
+
