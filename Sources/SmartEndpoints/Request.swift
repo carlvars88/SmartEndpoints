@@ -7,26 +7,6 @@
 
 import Foundation
 
-public protocol Requestable: Sendable {
-    associatedtype E: Endpoint
-    
-    associatedtype ParametersEncoder: QueryParameterEncoder where ParametersEncoder.Parameters == E.Parameters
-    associatedtype BodyEncoder: RequestBodyEncoder  where BodyEncoder.Body == E.Body
-    associatedtype ResultDecoder: ResponseDecoder   where ResultDecoder.Result == E.Result
-    associatedtype CredentialsEncoder: RequestCredentialsEncoder    where CredentialsEncoder.Credentials == E.API.Credentials
-    
-    var endpoint: E { get }
-    var queryParams: E.Parameters { get }
-    var body: E.Body { get }
-    var credentials: E.API.Credentials { get }
-    var headers: HTTPHeaders { get }
-    
-    var parameterEncoder: ParametersEncoder { get }
-    var bodyEncoder: BodyEncoder { get }
-    var responseDecoder: ResultDecoder { get }
-    var credentialsEncoder: CredentialsEncoder { get }
-}
-
 
 public struct Request<E: Endpoint>: Sendable {
     public let endpoint: E
