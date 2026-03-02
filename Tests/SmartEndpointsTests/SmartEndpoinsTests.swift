@@ -12,9 +12,20 @@ import Foundation
 
 // MARK: - DummyJSON API Definition
 
-/// API configuration for https://dummyjson.com/
-struct DummyJSONAPI: APIProtocol {
+/// Public (unauthenticated) API configuration for https://dummyjson.com/
+struct PublicDummyJSONAPI: APIProtocol {
     typealias Credentials = None
+    static let baseUrl = "https://dummyjson.com"
+    static var defaultHeaders: HTTPHeaders {
+        var headers = HTTPHeaders()
+        headers["Content-Type"] = "application/json"
+        return headers
+    }
+}
+
+/// Authenticated API configuration for https://dummyjson.com/ (requires Bearer token)
+struct DummyJSONAPI: APIProtocol {
+    typealias Credentials = BearerCredential
     static let baseUrl = "https://dummyjson.com"
     static var defaultHeaders: HTTPHeaders {
         var headers = HTTPHeaders()
@@ -102,14 +113,16 @@ extension PaginationParameters: QueryParameterEncodable {
 
 // MARK: - Endpoints
 
+// MARK: - Public Endpoints (no authentication required)
+
 /// GET /products - Get all products
 struct GetProductsEndpoint: Endpoint {
     typealias Result = ProductsResponse
     typealias Parameters = PaginationParameters
     typealias Body = None
-    typealias API = DummyJSONAPI
-    
-    var api: API.Type { DummyJSONAPI.self }
+    typealias API = PublicDummyJSONAPI
+
+    var api: API.Type { PublicDummyJSONAPI.self }
     var path: Path { Path("/products") }
     var method: HTTPMethod { .get }
 }
@@ -119,11 +132,11 @@ struct GetProductEndpoint: Endpoint {
     typealias Result = Product
     typealias Parameters = None
     typealias Body = None
-    typealias API = DummyJSONAPI
-    
+    typealias API = PublicDummyJSONAPI
+
     let productId: Int
-    
-    var api: API.Type { DummyJSONAPI.self }
+
+    var api: API.Type { PublicDummyJSONAPI.self }
     var path: Path { Path("/products/\(productId)") }
     var method: HTTPMethod { .get }
 }
@@ -133,9 +146,9 @@ struct SearchProductsEndpoint: Endpoint {
     typealias Result = ProductsResponse
     typealias Parameters = SearchParameters
     typealias Body = None
-    typealias API = DummyJSONAPI
-    
-    var api: API.Type { DummyJSONAPI.self }
+    typealias API = PublicDummyJSONAPI
+
+    var api: API.Type { PublicDummyJSONAPI.self }
     var path: Path { Path("/products/search") }
     var method: HTTPMethod { .get }
 }
@@ -145,9 +158,9 @@ struct GetUsersEndpoint: Endpoint {
     typealias Result = UsersResponse
     typealias Parameters = PaginationParameters
     typealias Body = None
-    typealias API = DummyJSONAPI
-    
-    var api: API.Type { DummyJSONAPI.self }
+    typealias API = PublicDummyJSONAPI
+
+    var api: API.Type { PublicDummyJSONAPI.self }
     var path: Path { Path("/users") }
     var method: HTTPMethod { .get }
 }
@@ -157,25 +170,39 @@ struct GetUserEndpoint: Endpoint {
     typealias Result = User
     typealias Parameters = None
     typealias Body = None
-    typealias API = DummyJSONAPI
-    
+    typealias API = PublicDummyJSONAPI
+
     let userId: Int
-    
-    var api: API.Type { DummyJSONAPI.self }
+
+    var api: API.Type { PublicDummyJSONAPI.self }
     var path: Path { Path("/users/\(userId)") }
     var method: HTTPMethod { .get }
 }
 
-/// POST /auth/login - Login endpoint
+/// POST /auth/login - Login endpoint (public — no credentials needed)
 struct LoginEndpoint: Endpoint {
     typealias Result = AuthResponse
     typealias Parameters = None
     typealias Body = LoginBody
-    typealias API = DummyJSONAPI
-    
-    var api: API.Type { DummyJSONAPI.self }
+    typealias API = PublicDummyJSONAPI
+
+    var api: API.Type { PublicDummyJSONAPI.self }
     var path: Path { Path("/auth/login") }
     var method: HTTPMethod { .post }
+}
+
+// MARK: - Private Endpoints (Bearer token required)
+
+/// GET /auth/me - Fetch the authenticated user's profile
+struct GetMeEndpoint: Endpoint {
+    typealias Result = User
+    typealias Parameters = None
+    typealias Body = None
+    typealias API = DummyJSONAPI
+
+    var api: API.Type { DummyJSONAPI.self }
+    var path: Path { Path("/auth/me") }
+    var method: HTTPMethod { .get }
 }
 
 // MARK: - Test Suite
@@ -318,16 +345,38 @@ struct DummyJSONAPITests {
             endpoint: endpoint,
             body: loginBody
         )
-        
+
         // Act
         let (authResponse, _) = try await client.send(request)
-        
+
         // Assert
         #expect(authResponse.id > 0, "Should return a valid user ID")
         #expect(!authResponse.accessToken.isEmpty, "Should return a valid token")
         #expect(authResponse.username == "emilys", "Username should match")
         #expect(!authResponse.email.isEmpty, "Should have an email")
         #expect(!authResponse.firstName.isEmpty, "Should have a first name")
+    }
+
+    @Test("Fetch authenticated user profile with bearer token")
+    func testGetAuthenticatedUserProfile() async throws {
+        // Arrange — first obtain a token via the public login endpoint
+        let loginRequest = Request(
+            endpoint: LoginEndpoint(),
+            body: LoginBody(username: "emilys", password: "emilyspass")
+        )
+        let (authResponse, _) = try await client.send(loginRequest)
+
+        // Act — use the token on a private endpoint
+        let meRequest = Request(
+            endpoint: GetMeEndpoint(),
+            credentials: BearerCredential(value: authResponse.accessToken)
+        )
+        let (me, _) = try await client.send(meRequest)
+
+        // Assert
+        #expect(me.id == authResponse.id, "Profile ID should match the logged-in user")
+        #expect(!me.firstName.isEmpty, "Should have a first name")
+        #expect(!me.email.isEmpty, "Should have an email")
     }
     
     // MARK: - Error Handling Tests
