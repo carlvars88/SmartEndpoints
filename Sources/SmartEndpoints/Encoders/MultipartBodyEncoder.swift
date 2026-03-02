@@ -33,7 +33,10 @@ public struct MultipartBodyEncoder: RequestBodyEncoder {
     public func encode(_ body: MultipartParts, into urlRequest: inout URLRequest) throws {
         let boundary = "Boundary-\(UUID().uuidString)"
         var data = Data()
-        func append(_ s: String) { data.append(s.data(using: .utf8)!) }
+        func append(_ s: String) {
+            guard let encoded = s.data(using: .utf8) else { return }
+            data.append(encoded)
+        }
 
         for (k, v) in body.fields {
             append("--\(boundary)\r\n")
