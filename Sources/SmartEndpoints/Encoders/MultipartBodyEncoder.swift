@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  SmartEndpoins
+//  SmartEndpoints
 //
 //  Created by MacBook Pro on 8/22/25.
 //
@@ -15,12 +15,22 @@ public struct MultipartFile: Sendable {
     }
 }
 
+public struct MultipartParts: Sendable, BodyEncodable {
+    public let fields: [(String, String)]
+    public let files: [MultipartFile]
+
+    public init(fields: [(String, String)] = [], files: [MultipartFile] = []) {
+        self.fields = fields
+        self.files = files
+    }
+
+    public static var bodyEncoder: MultipartBodyEncoder { .shared }
+}
+
 public struct MultipartBodyEncoder: RequestBodyEncoder {
-    public typealias Parts = (fields: [(String, String)], files: [MultipartFile])
-    
     public static let shared = Self()
-    
-    public func encode(_ body: Parts, into urlRequest: inout URLRequest) throws {
+
+    public func encode(_ body: MultipartParts, into urlRequest: inout URLRequest) throws {
         let boundary = "Boundary-\(UUID().uuidString)"
         var data = Data()
         func append(_ s: String) { data.append(s.data(using: .utf8)!) }
