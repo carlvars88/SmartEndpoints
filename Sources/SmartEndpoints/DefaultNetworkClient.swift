@@ -14,13 +14,13 @@ public struct DefaultNetworkClient: NetworkClient {
         self.urlSession = urlSession
     }
 
-    public func send<R: Requestable>(_ r: R) async throws -> (R.E.Output, HTTPURLResponse) {
+    public func send<E: Endpoint>(_ r: Request<E>) async throws -> (E.Result, HTTPURLResponse) {
         let req = try buildRequest(request: r)
         let (data, response) = try await urlSession.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
         }
-        return (try r.endpoint.responseDecoder.decode(data, httpResponse), httpResponse)
+        return (try r.resultDecoder.decode(data, httpResponse), httpResponse)
     }
 }
 
