@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  SmartEndpoins
+//  SmartEndpoints
 //
 //  Created by MacBook Pro on 8/22/25.
 //
@@ -8,69 +8,85 @@
 import Foundation
 
 public protocol Endpoint: Sendable {
-    associatedtype Output
-    associatedtype Parameters
-    associatedtype Body
-    associatedtype Credentials
+    associatedtype Result: ResultDecodable
+    associatedtype Parameters: QueryParameterEncodable
+    associatedtype Body: BodyEncodable
     associatedtype API: APIProtocol
-    associatedtype ParametersEncoder: QueryParameterEncoder where ParametersEncoder.Parameters == Parameters
-    associatedtype BodyEncoder: RequestBodyEncoder      where BodyEncoder.Body == Body
-    associatedtype ResultDecoder: ResponseDecoder  where ResultDecoder.Output == Output
-    associatedtype CredentialsEncoder: RequestCredentialsEncoder where CredentialsEncoder.Credentials == Credentials
-    
+
     var api: API.Type { get }
     var path: Path { get }
     var method: HTTPMethod { get }
-    var parameterEncoder: ParametersEncoder { get }
-    var bodyEncoder: BodyEncoder { get }
-    var responseDecoder: ResultDecoder { get }
-    var credentialsEncoder: CredentialsEncoder { get }
 }
 
-// Base default (harmless if you always use method-marker protocols)
-public extension Endpoint {
-    var api: API.Type { API.self }
+extension Endpoint {
+    public var api: API.Type { API.self }
 }
 
-// Zero/empty conveniences
-public extension Endpoint where ParametersEncoder == EmptyParametersEncoder {
-    var parameterEncoder: EmptyParametersEncoder { .shared }
-}
-public extension Endpoint where BodyEncoder == EmptyBodyEncoder {
-    var bodyEncoder: EmptyBodyEncoder { .shared }
-}
-public extension Endpoint where CredentialsEncoder == EmptyCredentialsEncoder {
-    var credentialsEncoder: EmptyCredentialsEncoder { .shared }
-}
-public extension Endpoint where ResultDecoder == PlainTextDecoder, Output == String {
-    var responseDecoder: PlainTextDecoder { .shared }
+
+public protocol ResultDecodable: Sendable {
+    associatedtype ResultDecoder: ResponseDecoder where ResultDecoder.Result == Self
+    
+    static var resultDecoder: ResultDecoder { get }
 }
 
-public extension Endpoint where ResultDecoder == JSONResponseDecoder<Output> {
-    var responseDecoder: JSONResponseDecoder<Output> { .init() }
+public protocol QueryParameterEncodable: Sendable {
+    associatedtype ParameterEncoder: QueryParameterEncoder where ParameterEncoder.Parameters == Self
+    
+    static var queryParameterEncoder: ParameterEncoder { get }
 }
 
-public extension Endpoint where ParametersEncoder == URLQueryEncoder<Parameters> {
-    var parameterEncoder: URLQueryEncoder<Parameters> { .init() }
+public protocol BodyEncodable: Sendable {
+    associatedtype BodyEncoder: RequestBodyEncoder where BodyEncoder.Body == Self
+    
+    static var bodyEncoder: BodyEncoder { get }
 }
 
-public extension Endpoint where BodyEncoder == JSONBodyEncoder<Body> {
-    var bodyEncoder: JSONBodyEncoder<Body> { .init() }
+public protocol CredentialsEncodable: Sendable {
+    associatedtype CredentialsEncoder: RequestCredentialsEncoder where CredentialsEncoder.Credentials == Self
+    
+    static var credentialsEncoder: CredentialsEncoder { get }
 }
 
-public extension Endpoint where BodyEncoder == FormURLEncodedBodyEncoder<Body> {
-    var bodyEncoder: FormURLEncodedBodyEncoder<Body> { .init() }
+public protocol JSONDecodable: Decodable, ResultDecodable {}
+
+public protocol JSONEncodable: Encodable, BodyEncodable {}
+
+public protocol FormURLEncodeBodyEncodable: Encodable, BodyEncodable {}
+
+public protocol BearerCredentialEncodable: CredentialsEncodable {}
+
+extension JSONDecodable {
+    public static var resultDecoder: JSONResponseDecoder<Self> { .init() }
 }
 
-public extension Endpoint where BodyEncoder == MultipartBodyEncoder {
-    var bodyEncoder: MultipartBodyEncoder { .shared }
+extension String: ResultDecodable {
+    static public var resultDecoder: PlainTextDecoder { .init() }
 }
 
-public extension Endpoint where CredentialsEncoder == BearerCredentialEncoder {
-    var credentialsEncoder: BearerCredentialEncoder { .shared }
+extension JSONEncodable {
+    public static var bodyEncoder: JSONBodyEncoder<Self> { .init() }
 }
 
-public extension Endpoint where CredentialsEncoder == BasicCredentialsEncoder {
-    var credentialsEncoder: BasicCredentialsEncoder { .shared }
+extension FormURLEncodeBodyEncodable {
+    public static var bodyEncoder: FormURLEncodedBodyEncoder<Self> { .init() }
 }
 
+extension BearerCredentialEncodable {
+    public static var credentialsEncoder: BearerCredentialEncoder { .init() }
+}
+
+extension Empty: ResultDecodable {
+    public static var resultDecoder: EmptyResponseDecoder { .init() }
+}
+
+extension None: QueryParameterEncodable {
+    public static var queryParameterEncoder: EmptyParametersEncoder { .init() }
+}
+
+extension None: BodyEncodable {
+    public static var bodyEncoder: EmptyBodyEncoder { .init() }
+}
+
+extension None: CredentialsEncodable {
+    public static var credentialsEncoder: EmptyCredentialsEncoder { .init() }
+}

@@ -122,7 +122,6 @@ struct GetProductsEndpoint: Endpoint {
     typealias Body = None
     typealias API = PublicDummyJSONAPI
 
-    var api: API.Type { PublicDummyJSONAPI.self }
     var path: Path { Path("/products") }
     var method: HTTPMethod { .get }
 }
@@ -136,7 +135,6 @@ struct GetProductEndpoint: Endpoint {
 
     let productId: Int
 
-    var api: API.Type { PublicDummyJSONAPI.self }
     var path: Path { Path("/products/\(productId)") }
     var method: HTTPMethod { .get }
 }
@@ -148,7 +146,6 @@ struct SearchProductsEndpoint: Endpoint {
     typealias Body = None
     typealias API = PublicDummyJSONAPI
 
-    var api: API.Type { PublicDummyJSONAPI.self }
     var path: Path { Path("/products/search") }
     var method: HTTPMethod { .get }
 }
@@ -160,7 +157,6 @@ struct GetUsersEndpoint: Endpoint {
     typealias Body = None
     typealias API = PublicDummyJSONAPI
 
-    var api: API.Type { PublicDummyJSONAPI.self }
     var path: Path { Path("/users") }
     var method: HTTPMethod { .get }
 }
@@ -174,7 +170,6 @@ struct GetUserEndpoint: Endpoint {
 
     let userId: Int
 
-    var api: API.Type { PublicDummyJSONAPI.self }
     var path: Path { Path("/users/\(userId)") }
     var method: HTTPMethod { .get }
 }
@@ -186,7 +181,6 @@ struct LoginEndpoint: Endpoint {
     typealias Body = LoginBody
     typealias API = PublicDummyJSONAPI
 
-    var api: API.Type { PublicDummyJSONAPI.self }
     var path: Path { Path("/auth/login") }
     var method: HTTPMethod { .post }
 }
@@ -200,7 +194,6 @@ struct GetMeEndpoint: Endpoint {
     typealias Body = None
     typealias API = DummyJSONAPI
 
-    var api: API.Type { DummyJSONAPI.self }
     var path: Path { Path("/auth/me") }
     var method: HTTPMethod { .get }
 }
