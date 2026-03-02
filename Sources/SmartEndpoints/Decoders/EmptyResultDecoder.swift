@@ -11,10 +11,7 @@ public struct EmptyResponseDecoder: ResponseDecoder {
     public var acceptHeader: String?
     
     public func decode(_ data: Data, _ response: HTTPURLResponse) throws -> Empty {
-        guard 200..<300 ~= response.statusCode else {
-            throw APIError.http(status: response.statusCode,
-                                payload: String(data: data, encoding: .utf8))
-        }
+        try validateStatus(response, data: data)
         return .init()
     }
     

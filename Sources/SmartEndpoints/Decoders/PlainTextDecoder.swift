@@ -13,10 +13,7 @@ public struct PlainTextDecoder: ResponseDecoder {
     public let acceptHeader: String? = "text/plain"
     
     public func decode(_ data: Data, _ response: HTTPURLResponse) throws -> String {
-        guard 200..<300 ~= response.statusCode else {
-            throw APIError.http(status: response.statusCode,
-                                payload: String(data: data, encoding: .utf8))
-        }
+        try validateStatus(response, data: data)
         guard let text = String(data: data, encoding: .utf8) else {
             throw DecodingError.dataCorrupted(
                 DecodingError.Context(codingPath: [],
