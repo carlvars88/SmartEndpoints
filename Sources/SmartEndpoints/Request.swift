@@ -66,6 +66,7 @@ extension Request {
         // Encode credentials and body (these may override headers if needed)
         try self.credentialsEncoder.encode(self.credentials, into: &urlRequest)
         try self.bodyEncoder.encode(self.body, into: &urlRequest)
+        try urlRequest.validate()
         return urlRequest
     }
 }

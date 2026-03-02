@@ -75,6 +75,12 @@ extension BearerCredentialEncodable {
     public static var credentialsEncoder: BearerCredentialEncoder { .init() }
 }
 
+public protocol BasicCredentialEncodable: CredentialsEncodable {}
+
+extension BasicCredentialEncodable {
+    public static var credentialsEncoder: BasicCredentialsEncoder { .init() }
+}
+
 extension Empty: ResultDecodable {
     public static var resultDecoder: EmptyResponseDecoder { .init() }
 }

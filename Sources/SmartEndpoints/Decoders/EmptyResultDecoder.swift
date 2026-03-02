@@ -8,7 +8,7 @@
 import Foundation
 
 public struct EmptyResponseDecoder: ResponseDecoder {
-    public var acceptHeader: String?
+    public let acceptHeader: String? = nil
     
     public func decode(_ data: Data, _ response: HTTPURLResponse) throws -> Empty {
         try validateStatus(response, data: data)

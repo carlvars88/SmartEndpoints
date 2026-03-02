@@ -41,7 +41,7 @@ public struct BearerCredential: Sendable, BearerCredentialEncodable {
     }
 }
 
-public struct BasicCredentials: Sendable {
+public struct BasicCredentials: Sendable, BasicCredentialEncodable {
     public let username: String
     public let password: String
     
