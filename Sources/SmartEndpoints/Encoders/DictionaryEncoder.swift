@@ -7,8 +7,9 @@
 
 import Foundation
 
-public final class DictionaryEncoder {
+public struct DictionaryEncoder {
     private let encoder = JSONEncoder()
+    public init() {}
     public func encode<T: Encodable>(_ value: T) throws -> [String: Any] {
         let data = try encoder.encode(value)
         return (try JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
