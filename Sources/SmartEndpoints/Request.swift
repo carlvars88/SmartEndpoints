@@ -38,17 +38,17 @@ extension Request {
         let endpoint = self.endpoint
         
         guard let url = URL(string: self.endpoint.api.baseUrl) else {
-            throw URLError(.badURL)
+            throw APIError.invalidURL
         }
-        
+
         guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-            throw URLError(.badURL)
+            throw APIError.invalidURL
         }
         components.path = endpoint.path.value
         try self.parameterEncoder.encode(self.queryParams, into: &components)
         // 2. Build URLRequest
         guard let componentURL = components.url else {
-            throw URLError(.badURL)
+            throw APIError.invalidURL
         }
         var urlRequest = URLRequest(url: componentURL)
         urlRequest.method = endpoint.method
