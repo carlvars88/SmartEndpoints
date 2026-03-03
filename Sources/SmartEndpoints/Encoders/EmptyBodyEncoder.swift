@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  SmartEndpoins
+//  SmartEndpoints
 //
 //  Created by MacBook Pro on 8/22/25.
 //
@@ -8,6 +8,6 @@
 import Foundation
 
 public struct EmptyBodyEncoder: RequestBodyEncoder {
-    public static let shared = Self()
-    public func encode(_ body: None, into urlRequest: inout URLRequest) throws {}
+    public typealias Body = None
+    public func encode(_ body: Body, into urlRequest: inout URLRequest) throws {}
 }

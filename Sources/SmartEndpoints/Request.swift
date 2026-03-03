@@ -12,15 +12,15 @@ public struct Request<E: Endpoint>: Sendable {
     public let endpoint: E
     public let queryParams: E.Parameters
     public let body: E.Body
-    public let credentials: E.API.Credentials
+    public let credentials: E.Credentials
     public let headers: HTTPHeaders
-    
+
     public let parameterEncoder: any QueryParameterEncoder<E.Parameters>
     public let bodyEncoder: any RequestBodyEncoder<E.Body>
-    public let credentialsEncoder: any RequestCredentialsEncoder<E.API.Credentials>
+    public let credentialsEncoder: any RequestCredentialsEncoder<E.Credentials>
     public let resultDecoder: any ResponseDecoder<E.Result>
-    
-    public init(endpoint: E, queryParams: E.Parameters, body: E.Body, credentials: E.API.Credentials, headers: HTTPHeaders = .init()) {
+
+    public init(endpoint: E, queryParams: E.Parameters, body: E.Body, credentials: E.Credentials, headers: HTTPHeaders = .init()) {
         self.endpoint = endpoint
         self.queryParams = queryParams
         self.body = body
@@ -28,7 +28,7 @@ public struct Request<E: Endpoint>: Sendable {
         self.headers = headers
         self.parameterEncoder = E.Parameters.queryParameterEncoder
         self.bodyEncoder = E.Body.bodyEncoder
-        self.credentialsEncoder = E.API.Credentials.credentialsEncoder
+        self.credentialsEncoder = E.Credentials.credentialsEncoder
         self.resultDecoder = E.Result.resultDecoder
     }
 }
@@ -36,8 +36,8 @@ public struct Request<E: Endpoint>: Sendable {
 extension Request {
     public func asURLRequest() throws -> URLRequest {
         let endpoint = self.endpoint
-        
-        guard let url = URL(string: self.endpoint.api.baseUrl) else {
+
+        guard let url = URL(string: self.endpoint.api.baseUrl), url.host != nil else {
             throw APIError.invalidURL
         }
 
@@ -45,14 +45,14 @@ extension Request {
             throw APIError.invalidURL
         }
         components.path = endpoint.path.value
-        try self.parameterEncoder.encode(self.queryParams, into: &components)
+        try wrapping { try self.parameterEncoder.encode(self.queryParams, into: &components) }
         // 2. Build URLRequest
         guard let componentURL = components.url else {
             throw APIError.invalidURL
         }
         var urlRequest = URLRequest(url: componentURL)
         urlRequest.method = endpoint.method
-        
+
         // Build base headers: API defaults, with decoder's Accept applied on top
         var baseHeaders = self.endpoint.api.defaultHeaders
         if let acceptValue = self.resultDecoder.acceptHeader {
@@ -64,17 +64,23 @@ extension Request {
         urlRequest.headers = headers
 
         // Encode credentials and body (these may override headers if needed)
-        try self.credentialsEncoder.encode(self.credentials, into: &urlRequest)
-        try self.bodyEncoder.encode(self.body, into: &urlRequest)
+        try wrapping { try self.credentialsEncoder.encode(self.credentials, into: &urlRequest) }
+        try wrapping { try self.bodyEncoder.encode(self.body, into: &urlRequest) }
         try urlRequest.validate()
         return urlRequest
     }
 }
 
+private func wrapping(_ block: () throws -> Void) throws {
+    do { try block() }
+    catch let e as APIError { throw e }
+    catch { throw APIError.encodingFailed(error) }
+}
+
 public extension Request where
 E.Parameters == None,
 E.Body == None,
-E.API.Credentials == None
+E.Credentials == None
 {
     init(endpoint: E, headers: HTTPHeaders = .init()) {
         self.init(endpoint: endpoint,
@@ -89,7 +95,7 @@ public extension Request where
 E.Parameters == None
 {
     init(endpoint: E, body: E.Body,
-         credentials: E.API.Credentials,
+         credentials: E.Credentials,
          headers: HTTPHeaders = .init()) {
         self.init(endpoint: endpoint,
                   queryParams: .init(),
@@ -104,7 +110,7 @@ E.Body == None
 {
     init(endpoint: E,
          query: E.Parameters,
-         credentials: E.API.Credentials,
+         credentials: E.Credentials,
          headers: HTTPHeaders = .init()) {
         self.init(endpoint: endpoint,
                   queryParams: query,
@@ -116,7 +122,7 @@ E.Body == None
 
 
 public extension Request where
-E.API.Credentials == None
+E.Credentials == None
 {
     init(endpoint: E,
          query:  E.Parameters,
@@ -135,7 +141,7 @@ E.Parameters == None,
 E.Body == None
 {
     init(endpoint: E,
-         credentials: E.API.Credentials,
+         credentials: E.Credentials,
          headers: HTTPHeaders = .init()) {
         self.init(endpoint: endpoint,
                   queryParams: None(),
@@ -147,7 +153,7 @@ E.Body == None
 
 public extension Request where
 E.Parameters == None,
-E.API.Credentials == None
+E.Credentials == None
 {
     init(endpoint: E,
          body: E.Body,
@@ -163,7 +169,7 @@ E.API.Credentials == None
 
 public extension Request where
 E.Body == None,
-E.API.Credentials == None
+E.Credentials == None
 {
     init(endpoint: E,
          queryParams: E.Parameters,
@@ -175,6 +181,5 @@ E.API.Credentials == None
                   headers: headers)
     }
 }
-
 
 

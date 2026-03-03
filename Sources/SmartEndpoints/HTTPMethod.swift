@@ -65,8 +65,9 @@ extension URLRequest {
     }
 
     public func validate() throws {
-        if method == .get, httpBody != nil {
-            throw URLError(.badURL)
+        let bodyForbidden: [HTTPMethod] = [.get, .head, .delete, .trace]
+        if let method, bodyForbidden.contains(method), httpBody != nil {
+            throw APIError.bodyNotAllowed(method)
         }
     }
 }

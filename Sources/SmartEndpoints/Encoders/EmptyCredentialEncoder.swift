@@ -8,6 +8,8 @@
 import Foundation
 
 public struct EmptyCredentialsEncoder: RequestCredentialsEncoder, Sendable {
-    public static let shared = Self()
-    public func encode(_ credentials: None) throws -> [String: String] { [:] }
+    public typealias Credentials = None
+    public func encode(_ credentials: Credentials, into request: inout URLRequest) throws { }
 }
+
+

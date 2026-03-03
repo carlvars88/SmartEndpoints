@@ -9,7 +9,6 @@ import Foundation
 
 public struct EmptyParametersEncoder: QueryParameterEncoder, Sendable {
     public typealias Parameters = None
-    public static let shared = Self()
     public func encode(_ params: Parameters, into components: inout URLComponents) throws { }
 }
 

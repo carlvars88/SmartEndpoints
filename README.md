@@ -3,8 +3,8 @@
 SmartEndpoints is a Swift library for defining API endpoints in a type-safe, protocol-oriented way. It replaces the common pattern of modelling endpoints as a single enum — popularised by [Moya](https://github.com/Moya/Moya) — with a design where every endpoint is its own type, and the compiler enforces the correct encoder/decoder for every request component.
 
 - **Platforms:** iOS 15+, macOS 12+
-- **Swift:** 6.0
-- **Dependencies:** none (Foundation only)
+- **Swift:** 6.0+
+- **Core dependencies:** none (Foundation only)
 
 ---
 
@@ -30,15 +30,25 @@ Each endpoint is a dedicated type that declares its exact request shape through 
 
 ```swift
 struct GetUserEndpoint: Endpoint {
-    typealias Result     = User            // decoded via JSONResponseDecoder
-    typealias Parameters = None            // no query params
-    typealias Body       = None            // no body
-    typealias API        = MyAPI           // which service
+    typealias Result     = User    // decoded via JSONResponseDecoder
+    typealias Parameters = None    // no query params
+    typealias Body       = None    // no body
+    typealias API        = MyAPI   // which service
 
     let userId: Int
-    var api: API.Type  { MyAPI.self }
-    var path: Path     { Path("/users/\(userId)") }
+    var path: Path     { Path("/users/:id", values: ["id": "\(userId)"]) }
     var method: HTTPMethod { .get }
+}
+```
+
+Or with the optional macro product:
+
+```swift
+@GET("/users/:id")
+struct GetUserEndpoint {
+    typealias API    = MyAPI
+    typealias Result = User
+    let userId: Int
 }
 ```
 
@@ -48,16 +58,37 @@ The compiler resolves the correct encoder/decoder for `Result`, `Parameters`, `B
 
 ## Installation
 
-### Swift Package Manager
+### Core library (no dependencies)
 
 ```swift
 // Package.swift
 dependencies: [
-    .package(url: "https://github.com/carlvars88/SmartEndpoints.git", from: "1.0.0")
+    .package(url: "https://github.com/yourusername/SmartEndpoints.git", from: "1.0.0")
+],
+targets: [
+    .target(
+        name: "MyTarget",
+        dependencies: [
+            .product(name: "SmartEndpoints", package: "SmartEndpoints")
+        ]
+    )
 ]
 ```
 
-Or add it via **Xcode → File → Add Package Dependencies**.
+### With macros (optional, opt-in)
+
+Adds `@GET`, `@POST`, `@PUT`, `@PATCH`, `@DELETE`, and `@endpoint` macros. Requires Swift 6.1+. Pulls in `swift-syntax` as a **build-time only** dependency — it is never linked into your app binary.
+
+```swift
+.target(
+    name: "MyTarget",
+    dependencies: [
+        .product(name: "SmartEndpointsMacros", package: "SmartEndpoints")
+    ]
+)
+```
+
+`import SmartEndpointsMacros` re-exports `SmartEndpoints`, so one import covers everything.
 
 ---
 
@@ -65,9 +96,14 @@ Or add it via **Xcode → File → Add Package Dependencies**.
 
 - [Core Concepts](#core-concepts)
 - [Defining an API](#defining-an-api)
+- [API Endpoint Protocols](#api-endpoint-protocols)
 - [Defining Endpoints](#defining-endpoints)
-- [Building and Sending Requests](#building-and-sending-requests)
+- [Endpoint Macros](#endpoint-macros)
+- [Building Requests](#building-requests)
+- [Using with URLSession](#using-with-urlsession)
+- [Using with Alamofire](#using-with-alamofire)
 - [Public vs. Authenticated APIs](#public-vs-authenticated-apis)
+- [Per-Endpoint Credential Override](#per-endpoint-credential-override)
 - [Query Parameters](#query-parameters)
 - [Request Body](#request-body)
 - [Response Decoding](#response-decoding)
@@ -81,24 +117,24 @@ Or add it via **Xcode → File → Add Package Dependencies**.
 
 ## Core Concepts
 
-Four protocols describe every aspect of an HTTP endpoint:
+Three protocols describe every aspect of an HTTP endpoint:
 
 | Protocol | Role |
 |---|---|
-| `APIProtocol` | Base URL, default headers, and credential type for a service |
+| `APIProtocol` | Base URL, default headers, and default credential type for a service |
 | `Endpoint` | Path, method, and the four associated types that shape the request |
-| `Request<E>` | Bundles an endpoint with its runtime values (params, body, credentials, headers) |
-| `NetworkClient` | Executes a `Request` and returns the decoded result |
+| `Request<E: Endpoint>` | Bundles an endpoint with its runtime values (params, body, credentials, headers) |
 
 The four associated types on `Endpoint` each carry their own encoder/decoder through a static property, resolved automatically by the type system:
 
 ```
 Endpoint
-├── Result:     ResultDecodable          →  ResponseDecoder
-├── Parameters: QueryParameterEncodable  →  QueryParameterEncoder
-├── Body:       BodyEncodable            →  RequestBodyEncoder
-└── API:        APIProtocol
-                └── Credentials: CredentialsEncodable  →  RequestCredentialsEncoder
+├── Result:      ResultDecodable          →  ResponseDecoder
+├── Parameters:  QueryParameterEncodable  →  QueryParameterEncoder
+├── Body:        BodyEncodable            →  RequestBodyEncoder
+├── API:         APIProtocol
+│                └── Credentials: CredentialsEncodable  →  RequestCredentialsEncoder (default)
+└── Credentials: CredentialsEncodable     →  RequestCredentialsEncoder (per-endpoint override)
 ```
 
 Convenience protocols (`JSONDecodable`, `JSONEncodable`, `BearerCredentialEncodable`, …) auto-wire the standard encoders/decoders so conforming types need no additional boilerplate.
@@ -118,7 +154,7 @@ struct MyAPI: APIProtocol {
     // Optional — applied to every request against this API
     static var defaultHeaders: HTTPHeaders {
         var h = HTTPHeaders()
-        h["Content-Type"] = "application/json"
+        h.update(name: "Accept-Language", value: Locale.current.language.languageCode?.identifier ?? "en")
         return h
     }
 }
@@ -126,35 +162,191 @@ struct MyAPI: APIProtocol {
 
 ---
 
+## API Endpoint Protocols
+
+Define a protocol per API that pre-fills `API` and `Credentials`. Every endpoint for that service then inherits both for free — no repeated typealiases.
+
+```swift
+protocol MyAPIEndpoint: Endpoint
+    where API == MyAPI, Credentials == BearerCredential {}
+```
+
+Endpoints just conform to the protocol:
+
+```swift
+struct GetProductEndpoint: MyAPIEndpoint {
+    typealias Result     = Product
+    typealias Parameters = None
+    typealias Body       = None
+
+    let productId: Int
+    var path: Path         { Path("/products/:id", values: ["id": "\(productId)"]) }
+    var method: HTTPMethod { .get }
+}
+```
+
+Combined with macros, only `Result` and the stored properties remain:
+
+```swift
+@GET("/products/:id")
+struct GetProductEndpoint: MyAPIEndpoint {
+    typealias Result = Product
+    let productId: Int
+}
+```
+
+### Public endpoints
+
+For routes that require no authentication, constrain `Credentials` to `None`:
+
+```swift
+protocol PublicMyAPIEndpoint: Endpoint
+    where API == MyAPI, Credentials == None {}
+```
+
+```swift
+@GET("/products")
+struct ListProductsEndpoint: PublicMyAPIEndpoint {
+    typealias Result = [Product]
+}
+```
+
+Attempting to pass credentials to a `PublicMyAPIEndpoint` request is a compile error, and attempting to omit them from a `MyAPIEndpoint` request is equally a compile error.
+
+### Per-endpoint credential override
+
+The `where Credentials ==` constraint on the endpoint protocol can be omitted entirely, leaving credential handling up to individual endpoints:
+
+```swift
+protocol MyAPIEndpoint: Endpoint where API == MyAPI {}
+
+// Most endpoints use bearer tokens
+struct GetOrderEndpoint: MyAPIEndpoint {
+    typealias Credentials = BearerCredential
+    …
+}
+
+// One endpoint uses basic auth
+struct RefreshTokenEndpoint: MyAPIEndpoint {
+    typealias Credentials = BasicCredentials
+    …
+}
+```
+
+---
+
 ## Defining Endpoints
 
-Each endpoint conforms to `Endpoint` and declares four associated types. Convenience protocols auto-wire the encoder/decoder so the associated type declaration is usually all that's needed:
+Each endpoint conforms to `Endpoint` and declares associated types. Convenience protocols auto-wire the encoder/decoder so the associated type declaration is usually all that's needed:
 
 ```swift
 struct SearchProductsEndpoint: Endpoint {
     typealias Result     = ProductsResponse  // JSONDecodable → JSONResponseDecoder
-    typealias Parameters = SearchQuery       // QueryParameterEncodable → URLQueryEncoder
-    typealias Body       = None              // no body
+    typealias Parameters = SearchQuery       // Encodable → URLQueryEncoder
+    typealias Body       = None
     typealias API        = MyAPI
 
-    var api: API.Type  { MyAPI.self }
-    var path: Path     { Path("/products/search") }
+    var path: Path         { Path("/products/search") }
     var method: HTTPMethod { .get }
 }
 ```
 
 ### Path
 
-`Path` holds the URL path string. Values can be interpolated inline or substituted via a dictionary:
+`Path` holds the URL path string. It substitutes `:token` placeholders from a dictionary at init time:
 
 ```swift
-Path("/users/\(userId)")
 Path("/users/:id", values: ["id": "\(userId)"])
+// → "/users/42"
+
+Path("/users/:userId/posts/:postId", values: ["userId": "\(userId)", "postId": "\(postId)"])
+// → "/users/7/posts/99"
 ```
 
 ---
 
-## Building and Sending Requests
+## Endpoint Macros
+
+With `import SmartEndpointsMacros`, you can collapse the boilerplate down to what actually varies per endpoint.
+
+**Without an API endpoint protocol** — `API` and `Result` must be declared manually:
+
+```swift
+@GET("/products/:id")
+struct GetProduct {
+    typealias API    = MyAPI     // required
+    typealias Result = Product   // required
+    let id: Int
+}
+```
+
+**With an API endpoint protocol** (recommended) — only `Result` remains:
+
+```swift
+@GET("/products/:id")
+struct GetProduct: MyAPIEndpoint {
+    typealias Result = Product
+    let id: Int
+}
+```
+
+The macro synthesises:
+
+| Generated | Value |
+|---|---|
+| `var method: HTTPMethod` | `.get` (or whichever method macro you use) |
+| `var path: Path` | Built from the template + stored properties by name |
+| `typealias Parameters = None` | Only if you don't declare it yourself |
+| `typealias Body = None` | Only if you don't declare it yourself |
+| `extension GetProduct: Endpoint` | Only if the struct has no inheritance clause |
+
+### Override defaults
+
+The macro emits `Parameters = None` and `Body = None` only if you haven't declared them. Declare either to override:
+
+```swift
+@POST("/products")
+struct CreateProduct: MyAPIEndpoint {
+    typealias Result = Product
+    typealias Body   = NewProduct   // overrides None
+    // Parameters stays None
+}
+
+@GET("/products")
+struct ListProducts: MyAPIEndpoint {
+    typealias Result     = [Product]
+    typealias Parameters = ListQuery  // overrides None
+    // Body stays None
+}
+```
+
+### Available macros
+
+| Macro | Method |
+|---|---|
+| `@GET("/path")` | GET |
+| `@POST("/path")` | POST |
+| `@PUT("/path")` | PUT |
+| `@PATCH("/path")` | PATCH |
+| `@DELETE("/path")` | DELETE |
+| `@endpoint(.method, "/path")` | any `HTTPMethod` |
+
+### Compile-time safety
+
+If a `:token` in the path template has no matching stored property, the compiler emits an error:
+
+```swift
+@GET("/products/:id")
+struct GetProduct {
+    typealias API    = MyAPI
+    typealias Result = Product
+    // ❌ error: Path template uses ':id' but no stored property named 'id' was found
+}
+```
+
+---
+
+## Building Requests
 
 `Request<E>` bundles an endpoint with its runtime values. Convenience initialisers exist for every combination of `None` components so you only provide what the endpoint actually needs:
 
@@ -163,78 +355,127 @@ Path("/users/:id", values: ["id": "\(userId)"])
 Request(endpoint: e, queryParams: p, body: b, credentials: c)
 
 // Combinations where some components are None
-Request(endpoint: e)                            // Parameters, Body, Credentials all None
-Request(endpoint: e, credentials: c)           // Parameters and Body are None
-Request(endpoint: e, body: b)                  // Parameters and Credentials are None
-Request(endpoint: e, body: b, credentials: c) // Parameters is None
-Request(endpoint: e, queryParams: p)           // Body and Credentials are None
+Request(endpoint: e)                             // Parameters, Body, Credentials all None
+Request(endpoint: e, credentials: c)            // Parameters and Body are None
+Request(endpoint: e, body: b)                   // Parameters and Credentials are None
+Request(endpoint: e, body: b, credentials: c)  // Parameters is None
+Request(endpoint: e, queryParams: p)            // Body and Credentials are None
 Request(endpoint: e, query: p, credentials: c) // Body is None
 Request(endpoint: e, query: p, body: b)        // Credentials is None
 ```
 
-`Request` can be converted to a standard `URLRequest` at any point:
+`Request` turns itself into a standard `URLRequest`:
 
 ```swift
 let urlRequest: URLRequest = try request.asURLRequest()
 ```
 
-`DefaultNetworkClient` is a thin `URLSession` wrapper that executes a `Request` and returns the decoded result:
+---
+
+## Using with URLSession
+
+SmartEndpoints produces `URLRequest` values — plug them straight into `URLSession`:
 
 ```swift
-let client = DefaultNetworkClient()
-let (products, _) = try await client.send(
-    Request(endpoint: SearchProductsEndpoint(), queryParams: SearchQuery(q: "phone"))
-)
+let urlRequest = try Request(endpoint: GetProduct(id: 42),
+                              credentials: BearerCredential(value: token))
+                    .asURLRequest()
+
+let (data, response) = try await URLSession.shared.data(for: urlRequest)
+let httpResponse = response as! HTTPURLResponse
+let product = try JSONDecoder().decode(Product.self, from: data)
 ```
 
-`send` returns `(E.Result, HTTPURLResponse)`, so you can inspect headers and status codes after decoding.
+Or wrap the pattern in a helper once and reuse it:
+
+```swift
+func send<E: Endpoint>(_ request: Request<E>) async throws -> (E.Result, HTTPURLResponse) {
+    let urlRequest = try request.asURLRequest()
+    let (data, response) = try await URLSession.shared.data(for: urlRequest)
+    let httpResponse = response as! HTTPURLResponse
+    return (try E.Result.resultDecoder.decode(data, httpResponse), httpResponse)
+}
+```
+
+---
+
+## Using with Alamofire
+
+Because `Request` already implements `asURLRequest()`, conforming to Alamofire's `URLRequestConvertible` takes one line in your app module:
+
+```swift
+import Alamofire
+import SmartEndpoints
+
+extension Request: URLRequestConvertible {}
+```
+
+Then pass any `Request` directly to `AF.request`:
+
+```swift
+AF.request(
+    Request(endpoint: GetProduct(id: 42), credentials: BearerCredential(value: token))
+)
+.responseDecodable(of: Product.self) { response in
+    // …
+}
+```
 
 ---
 
 ## Public vs. Authenticated APIs
 
-Many services expose both public and protected routes under the same base URL. Define two API types rather than making credentials optional:
+Use the [API Endpoint Protocols](#api-endpoint-protocols) pattern to separate public and authenticated routes. Define two endpoint protocols — one for each credential level:
 
 ```swift
-/// Endpoints documented as not requiring an Authorization header
-struct PublicMyAPI: APIProtocol {
-    typealias Credentials = None
-    static let baseUrl = "https://api.example.com"
-}
-
-/// Endpoints that require a Bearer token
 struct MyAPI: APIProtocol {
     typealias Credentials = BearerCredential
     static let baseUrl = "https://api.example.com"
 }
+
+// Authenticated endpoints — BearerCredential required at the call site
+protocol MyAPIEndpoint: Endpoint where API == MyAPI, Credentials == BearerCredential {}
+
+// Public endpoints — no credentials required
+protocol PublicMyAPIEndpoint: Endpoint where API == MyAPI, Credentials == None {}
 ```
 
-Assign each endpoint to the appropriate API. Attempting to build a `Request` for a `MyAPI` endpoint without a `BearerCredential` is a compile error.
+Assign each endpoint to the appropriate protocol. Attempting to build a `Request` for a `MyAPIEndpoint` without a `BearerCredential` is a compile error.
 
 ```swift
-// Public — no credentials in the Request
-struct LoginEndpoint: Endpoint {
-    typealias API = PublicMyAPI
-    …
+@GET("/auth/login")
+struct LoginEndpoint: PublicMyAPIEndpoint {   // no credentials
+    typealias Result = AuthToken
 }
 
-// Private — credentials are required by the type system
-struct GetProfileEndpoint: Endpoint {
-    typealias API = MyAPI
-    …
+@GET("/profile")
+struct GetProfileEndpoint: MyAPIEndpoint {    // BearerCredential required
+    typealias Result = UserProfile
 }
 ```
+
+---
+
+## Per-Endpoint Credential Override
+
+`Credentials` defaults to `API.Credentials` but can be overridden per endpoint by declaring a different `typealias Credentials`. This is useful when a single route within an authenticated API is publicly accessible:
 
 ```swift
-let (auth, _) = try await client.send(
-    Request(endpoint: LoginEndpoint(), body: LoginBody(username: u, password: p))
-)
+// Most endpoints use MyAPIEndpoint (BearerCredential required)
+// This one opts out by declaring Credentials = None directly
+@GET("/products/:id")
+struct GetPublicProductEndpoint: Endpoint {
+    typealias API         = MyAPI
+    typealias Credentials = None     // overrides the API default
+    typealias Result      = Product
+    let id: Int
+}
 
-let (profile, _) = try await client.send(
-    Request(endpoint: GetProfileEndpoint(),
-            credentials: BearerCredential(value: auth.accessToken))
-)
+// No credentials argument required — the type system enforces it
+Request(endpoint: GetPublicProductEndpoint(id: 42))
 ```
+
+For a more structured approach, see [API Endpoint Protocols](#api-endpoint-protocols).
 
 ---
 
@@ -290,7 +531,9 @@ struct UploadAvatarEndpoint: Endpoint {
 }
 
 let parts = MultipartParts(
-    fields: [("description", "Profile photo")],
+    fields: [
+        KeyValuePair(key: "description", value: "Profile photo")
+    ],
     files: [
         MultipartFile(name: "avatar", filename: "photo.jpg",
                       mimeType: "image/jpeg", data: imageData)
@@ -330,13 +573,23 @@ JSONResponseDecoder<MyType>(
 JSONResponseDecoder<MyType>(customDecoder: myDecoder)
 ```
 
+To customise the decoder per endpoint, override `resultDecoder` on your response type:
+
+```swift
+extension MyType {
+    static var resultDecoder: JSONResponseDecoder<Self> {
+        JSONResponseDecoder(keyDecodingStrategy: .convertFromSnakeCase)
+    }
+}
+```
+
 ### Plain text response
 
-Declare `Result = String`. `String` already conforms to `ResultDecodable` via `PlainTextDecoder`. Adds `Accept: text/plain`, validates 2xx, and throws `DecodingError` if the body is not valid UTF-8.
+Declare `Result = String`. `String` already conforms to `ResultDecodable` via `PlainTextDecoder`. Adds `Accept: text/plain`, validates 2xx, and throws `APIError.decodingFailed` if the body is not valid UTF-8.
 
 ### Ignored response body
 
-Declare `Result = Empty`. `EmptyResponseDecoder` validates the 2xx range and throws on error responses but discards the body.
+Declare `Result = Empty`. `EmptyResponseDecoder` validates the 2xx range and throws `APIError.http` on error responses but discards the body.
 
 ---
 
@@ -420,20 +673,29 @@ let merged = requestHeaders.merge(apiDefaultHeaders)
 
 ## Error Handling
 
-Every decoder validates the HTTP status code before decoding and throws for non-2xx responses:
+All errors thrown by the library are `APIError`. Callers only need to catch one type:
 
 ```swift
 do {
-    let (user, _) = try await client.send(request)
+    let (user, _) = try send(request)
 } catch let error as APIError {
     switch error {
     case .http(let status, let payload):
+        // Non-2xx response. payload is the raw response body, or nil if empty.
         print("HTTP \(status): \(payload ?? "no body")")
     case .invalidURL:
+        // API.baseUrl could not be parsed as a valid URL.
         print("Malformed base URL")
+    case .bodyNotAllowed(let method):
+        // A body was set on a GET, HEAD, DELETE, or TRACE request.
+        print("Body not allowed for \(method)")
+    case .encodingFailed(let underlying):
+        // A parameter, body, or credential encoder threw an error.
+        print("Encoding failed: \(underlying)")
+    case .decodingFailed(let underlying):
+        // The response decoder threw an error (e.g. malformed JSON, invalid UTF-8).
+        print("Decoding failed: \(underlying)")
     }
-} catch {
-    // URLError, DecodingError, …
 }
 ```
 

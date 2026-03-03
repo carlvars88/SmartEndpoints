@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  SmartEndpoins
+//  SmartEndpoints
 //
 //  Created by MacBook Pro on 8/22/25.
 //

@@ -44,7 +44,9 @@ public struct JSONResponseDecoder<T: Decodable & Sendable>: ResponseDecoder, Sen
             decoder.dataDecodingStrategy = dataDecodingStrategy
         }
         
-        return try decoder.decode(T.self, from: data)
+        do { return try decoder.decode(T.self, from: data) }
+        catch let e as APIError { throw e }
+        catch { throw APIError.decodingFailed(error) }
     }
 }
 

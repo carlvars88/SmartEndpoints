@@ -12,6 +12,7 @@ public protocol Endpoint: Sendable {
     associatedtype Parameters: QueryParameterEncodable
     associatedtype Body: BodyEncodable
     associatedtype API: APIProtocol
+    associatedtype Credentials: CredentialsEncodable = API.Credentials
 
     var api: API.Type { get }
     var path: Path { get }
