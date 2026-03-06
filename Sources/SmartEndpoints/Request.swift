@@ -15,10 +15,10 @@ public struct Request<E: Endpoint>: Sendable {
     public let credentials: E.Credentials
     public let headers: HTTPHeaders
 
-    public let parameterEncoder: any QueryParameterEncoder<E.Parameters>
-    public let bodyEncoder: any RequestBodyEncoder<E.Body>
-    public let credentialsEncoder: any RequestCredentialsEncoder<E.Credentials>
-    public let resultDecoder: any ResponseDecoder<E.Result>
+    public let parameterEncoder: E.Parameters.ParameterEncoder
+    public let bodyEncoder: E.Body.BodyEncoder
+    public let credentialsEncoder: E.Credentials.CredentialsEncoder
+    public let resultDecoder: E.Result.ResultDecoder
 
     public init(endpoint: E, queryParams: E.Parameters, body: E.Body, credentials: E.Credentials, headers: HTTPHeaders = .init()) {
         self.endpoint = endpoint
@@ -44,7 +44,7 @@ extension Request {
         guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             throw APIError.invalidURL
         }
-        components.path = endpoint.path.value
+        components.path = url.path + endpoint.path.value
         try wrapping { try self.parameterEncoder.encode(self.queryParams, into: &components) }
         // 2. Build URLRequest
         guard let componentURL = components.url else {

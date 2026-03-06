@@ -13,7 +13,7 @@ public protocol RequestCredentialsEncoder<Credentials>: Sendable where Credentia
     
 }
 
-public struct BearerCredentialEncoder: RequestCredentialsEncoder {
+public struct BearerCredentialEncoder: RequestCredentialsEncoder, Sendable {
     public func encode(_ credentials: BearerCredential, into request: inout URLRequest) throws {
         request.setValue("Bearer \(credentials.value)", forHTTPHeaderField: "Authorization")
     }
@@ -47,5 +47,3 @@ public struct BasicCredentials: Sendable, BasicCredentialEncodable {
         self.password = password
     }
 }
-
-
