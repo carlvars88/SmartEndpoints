@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  EmptyResultDecoder.swift
 //  SmartEndpoints
 //
 //  Created by MacBook Pro on 3/2/26.

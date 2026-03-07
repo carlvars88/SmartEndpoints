@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  APIProtocol.swift
 //  SmartEndpoints
 //
 //  Created by MacBook Pro on 9/4/25.

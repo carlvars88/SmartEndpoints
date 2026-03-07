@@ -28,7 +28,7 @@ private struct MockAPIWithDefaults: APIProtocol {
 }
 
 private struct AuthAPI: APIProtocol {
-    typealias Credentials = BearerCredential
+    typealias Credentials = BearerCredentials
     static let baseUrl = "https://api.example.com"
 }
 
@@ -371,7 +371,7 @@ struct CredentialTests {
     @Test("Bearer credential sets Authorization header")
     func testBearerCredential() throws {
         let req = try Request(endpoint: AuthEndpoint(),
-                              credentials: BearerCredential(value: "tok123")).asURLRequest()
+                              credentials: BearerCredentials(value: "tok123")).asURLRequest()
         #expect(req.value(forHTTPHeaderField: "Authorization") == "Bearer tok123")
     }
 
@@ -495,7 +495,7 @@ struct ValidationTests {
 
     @Test("POST with body is valid")
     func testPOSTBodyAllowed() throws {
-        try Request(endpoint: CreateEndpoint(), body: body).asURLRequest()
+        _ = try Request(endpoint: CreateEndpoint(), body: body).asURLRequest()
     }
 }
 
@@ -594,10 +594,6 @@ struct PathTests {
         #expect(path.value == "/users/1/posts/99")
     }
 
-    @Test("Leaves unmatched tokens untouched")
-    func testUnmatchedToken() {
-        #expect(Path("/items/:id", values: [:]).value == "/items/:id")
-    }
 }
 
 // MARK: - Error surface

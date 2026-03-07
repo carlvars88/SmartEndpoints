@@ -116,12 +116,14 @@ struct PathTests {
 @Suite("Macro expansion — default typealiases")
 struct DefaultTypealiasTests {
     // Verifying at the type level that None was synthesised.
-    // If Parameters or Body were NOT None, the init signatures below would not compile.
+    // If Parameters or Body were NOT None, these type assertions would not compile.
     @Test func listProductsHasNoneParameters() {
-        _ = Request(endpoint: ListProducts())   // Parameters == None, Body == None, Credentials == None
+        #expect(ListProducts.Parameters.self == None.self)
+        #expect(ListProducts.Body.self == None.self)
     }
 
     @Test func createProductHasNoneParameters() {
-        _ = Request(endpoint: CreateProduct(), body: CreateProductBody(name: "Widget"))
+        #expect(CreateProduct.Parameters.self == None.self)
+        #expect(CreateProduct.Body.self == CreateProductBody.self)
     }
 }

@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  RequestCredentialsEncoder.swift
 //  SmartEndpoints
 //
 //  Created by MacBook Pro on 9/1/25.
@@ -13,8 +13,8 @@ public protocol RequestCredentialsEncoder<Credentials>: Sendable where Credentia
     
 }
 
-public struct BearerCredentialEncoder: RequestCredentialsEncoder, Sendable {
-    public func encode(_ credentials: BearerCredential, into request: inout URLRequest) throws {
+public struct BearerCredentialsEncoder: RequestCredentialsEncoder, Sendable {
+    public func encode(_ credentials: BearerCredentials, into request: inout URLRequest) throws {
         request.setValue("Bearer \(credentials.value)", forHTTPHeaderField: "Authorization")
     }
 }
@@ -30,7 +30,7 @@ public struct BasicCredentialsEncoder: RequestCredentialsEncoder, Sendable {
     }
 }
 
-public struct BearerCredential: Sendable, BearerCredentialEncodable {
+public struct BearerCredentials: Sendable, BearerCredentialsEncodable {
     public let value: String
 
     public init(value: String) {
@@ -38,7 +38,7 @@ public struct BearerCredential: Sendable, BearerCredentialEncodable {
     }
 }
 
-public struct BasicCredentials: Sendable, BasicCredentialEncodable {
+public struct BasicCredentials: Sendable, BasicCredentialsEncodable {
     public let username: String
     public let password: String
     

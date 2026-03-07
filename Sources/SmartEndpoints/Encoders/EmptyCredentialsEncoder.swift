@@ -1,6 +1,6 @@
 //
-//  File.swift
-//  SmartEndpoins
+//  EmptyCredentialsEncoder.swift
+//  SmartEndpoints
 //
 //  Created by MacBook Pro on 9/1/25.
 //

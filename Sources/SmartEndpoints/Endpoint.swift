@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  Endpoint.swift
 //  SmartEndpoints
 //
 //  Created by MacBook Pro on 8/22/25.
@@ -54,7 +54,7 @@ public protocol JSONEncodable: Encodable, BodyEncodable {}
 
 public protocol FormURLEncodeBodyEncodable: Encodable, BodyEncodable {}
 
-public protocol BearerCredentialEncodable: CredentialsEncodable {}
+public protocol BearerCredentialsEncodable: CredentialsEncodable {}
 
 extension JSONDecodable {
     public static var resultDecoder: JSONResponseDecoder<Self> { .init() }
@@ -72,13 +72,13 @@ extension FormURLEncodeBodyEncodable {
     public static var bodyEncoder: FormURLEncodedBodyEncoder<Self> { .init() }
 }
 
-extension BearerCredentialEncodable {
-    public static var credentialsEncoder: BearerCredentialEncoder { .init() }
+extension BearerCredentialsEncodable {
+    public static var credentialsEncoder: BearerCredentialsEncoder { .init() }
 }
 
-public protocol BasicCredentialEncodable: CredentialsEncodable {}
+public protocol BasicCredentialsEncodable: CredentialsEncodable {}
 
-extension BasicCredentialEncodable {
+extension BasicCredentialsEncodable {
     public static var credentialsEncoder: BasicCredentialsEncoder { .init() }
 }
 
