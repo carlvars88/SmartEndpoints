@@ -1,6 +1,6 @@
 //
-//  File.swift
-//  SmartEndpoins
+//  JSONBodyEncoder.swift
+//  SmartEndpoints
 //
 //  Created by MacBook Pro on 8/22/25.
 //

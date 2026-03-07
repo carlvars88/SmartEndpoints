@@ -1,45 +1,86 @@
 //
-//  File.swift
-//  SmartEndpoins
+//  Request.swift
+//  SmartEndpoints
 //
 //  Created by MacBook Pro on 8/24/25.
 //
 
 import Foundation
 
-public protocol Requestable: Sendable {
-    associatedtype E: Endpoint
-    var endpoint: E { get }
-    var queryParams: E.ParametersEncoder.Parameters { get }
-    var body: E.BodyEncoder.Body { get }
-    var credentials: E.CredentialsEncoder.Credentials { get }
-    var headers: HTTPHeaders { get }
-}
 
-
-public struct Request<E: Endpoint>: Requestable {
+public struct Request<E: Endpoint>: Sendable {
     public let endpoint: E
-    public let queryParams: E.ParametersEncoder.Parameters
-    public let body: E.BodyEncoder.Body
-    public let credentials: E.CredentialsEncoder.Credentials
+    public let queryParams: E.Parameters
+    public let body: E.Body
+    public let credentials: E.Credentials
     public let headers: HTTPHeaders
-    
-    init(endpoint: E, queryParams: E.ParametersEncoder.Parameters, body: E.BodyEncoder.Body, credentials: E.CredentialsEncoder.Credentials, headers: HTTPHeaders = .init()) {
+
+    public let parameterEncoder: E.Parameters.ParameterEncoder
+    public let bodyEncoder: E.Body.BodyEncoder
+    public let credentialsEncoder: E.Credentials.CredentialsEncoder
+    public let resultDecoder: E.Result.ResultDecoder
+
+    public init(endpoint: E, queryParams: E.Parameters, body: E.Body, credentials: E.Credentials, headers: HTTPHeaders = .init()) {
         self.endpoint = endpoint
         self.queryParams = queryParams
         self.body = body
         self.credentials = credentials
         self.headers = headers
+        self.parameterEncoder = E.Parameters.queryParameterEncoder
+        self.bodyEncoder = E.Body.bodyEncoder
+        self.credentialsEncoder = E.Credentials.credentialsEncoder
+        self.resultDecoder = E.Result.resultDecoder
     }
 }
 
-extension Request: Sendable where
-    E.ParametersEncoder.Parameters: Sendable, E.BodyEncoder.Body: Sendable, E: Sendable {}
+extension Request {
+    public func asURLRequest() throws -> URLRequest {
+        let endpoint = self.endpoint
+
+        guard let url = URL(string: self.endpoint.api.baseUrl), url.host != nil else {
+            throw APIError.invalidURL
+        }
+
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            throw APIError.invalidURL
+        }
+        components.path = url.path + endpoint.path.value
+        try wrapping { try self.parameterEncoder.encode(self.queryParams, into: &components) }
+        // 2. Build URLRequest
+        guard let componentURL = components.url else {
+            throw APIError.invalidURL
+        }
+        var urlRequest = URLRequest(url: componentURL)
+        urlRequest.method = endpoint.method
+
+        // Build base headers: API defaults, with decoder's Accept applied on top
+        var baseHeaders = self.endpoint.api.defaultHeaders
+        if let acceptValue = self.resultDecoder.acceptHeader {
+            baseHeaders.update(name: "Accept", value: acceptValue)
+        }
+
+        // Merge with request-specific headers (request headers have highest precedence)
+        let headers = self.headers.merge(baseHeaders)
+        urlRequest.headers = headers
+
+        // Encode credentials and body (these may override headers if needed)
+        try wrapping { try self.credentialsEncoder.encode(self.credentials, into: &urlRequest) }
+        try wrapping { try self.bodyEncoder.encode(self.body, into: &urlRequest) }
+        try urlRequest.validate()
+        return urlRequest
+    }
+}
+
+private func wrapping(_ block: () throws -> Void) throws {
+    do { try block() }
+    catch let e as APIError { throw e }
+    catch { throw APIError.encodingFailed(error) }
+}
 
 public extension Request where
-    E.ParametersEncoder == EmptyParametersEncoder,
-    E.BodyEncoder == EmptyBodyEncoder,
-    E.CredentialsEncoder == EmptyCredentialsEncoder
+E.Parameters == None,
+E.Body == None,
+E.Credentials == None
 {
     init(endpoint: E, headers: HTTPHeaders = .init()) {
         self.init(endpoint: endpoint,
@@ -50,9 +91,11 @@ public extension Request where
     }
 }
 
-public extension Request where E.ParametersEncoder == EmptyParametersEncoder {
-    init(endpoint: E, body: E.BodyEncoder.Body,
-         credentials: E.CredentialsEncoder.Credentials,
+public extension Request where
+E.Parameters == None
+{
+    init(endpoint: E, body: E.Body,
+         credentials: E.Credentials,
          headers: HTTPHeaders = .init()) {
         self.init(endpoint: endpoint,
                   queryParams: .init(),
@@ -62,10 +105,12 @@ public extension Request where E.ParametersEncoder == EmptyParametersEncoder {
     }
 }
 
-public extension Request where E.BodyEncoder == EmptyBodyEncoder {
+public extension Request where
+E.Body == None
+{
     init(endpoint: E,
-         query: E.ParametersEncoder.Parameters,
-         credentials: E.CredentialsEncoder.Credentials,
+         query: E.Parameters,
+         credentials: E.Credentials,
          headers: HTTPHeaders = .init()) {
         self.init(endpoint: endpoint,
                   queryParams: query,
@@ -75,10 +120,13 @@ public extension Request where E.BodyEncoder == EmptyBodyEncoder {
     }
 }
 
-public extension Request where E.CredentialsEncoder == EmptyCredentialsEncoder {
+
+public extension Request where
+E.Credentials == None
+{
     init(endpoint: E,
-         query:  E.ParametersEncoder.Parameters,
-         body: E.BodyEncoder.Body,
+         query:  E.Parameters,
+         body: E.Body,
          headers: HTTPHeaders = .init()) {
         self.init(endpoint: endpoint,
                   queryParams: query,
@@ -88,11 +136,12 @@ public extension Request where E.CredentialsEncoder == EmptyCredentialsEncoder {
     }
 }
 
-// Parameters & Body empty
-public extension Request where E.ParametersEncoder == EmptyParametersEncoder,
-                               E.BodyEncoder == EmptyBodyEncoder {
+public extension Request where
+E.Parameters == None,
+E.Body == None
+{
     init(endpoint: E,
-         credentials: E.CredentialsEncoder.Credentials,
+         credentials: E.Credentials,
          headers: HTTPHeaders = .init()) {
         self.init(endpoint: endpoint,
                   queryParams: None(),
@@ -102,11 +151,12 @@ public extension Request where E.ParametersEncoder == EmptyParametersEncoder,
     }
 }
 
-// Parameters & Credentials empty
-public extension Request where E.ParametersEncoder == EmptyParametersEncoder,
-                               E.CredentialsEncoder == EmptyCredentialsEncoder {
+public extension Request where
+E.Parameters == None,
+E.Credentials == None
+{
     init(endpoint: E,
-         body: E.BodyEncoder.Body,
+         body: E.Body,
          headers: HTTPHeaders = .init()) {
         self.init(endpoint: endpoint,
                   queryParams: None(),
@@ -116,11 +166,13 @@ public extension Request where E.ParametersEncoder == EmptyParametersEncoder,
     }
 }
 
-// Body & Credentials empty
-public extension Request where E.BodyEncoder == EmptyBodyEncoder,
-                               E.CredentialsEncoder == EmptyCredentialsEncoder {
+
+public extension Request where
+E.Body == None,
+E.Credentials == None
+{
     init(endpoint: E,
-         queryParams: E.ParametersEncoder.Parameters,
+         queryParams: E.Parameters,
          headers: HTTPHeaders = .init()) {
         self.init(endpoint: endpoint,
                   queryParams: queryParams,
@@ -130,34 +182,4 @@ public extension Request where E.BodyEncoder == EmptyBodyEncoder,
     }
 }
 
-extension Requestable {
-    public func asURLRequest() throws -> URLRequest {
-        let endpoint = self.endpoint
-        
-        guard let url = URL(string: self.endpoint.api.baseUrl) else {
-            throw URLError(.badURL)
-        }
-        
-        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-            throw URLError(.badURL)
-        }
-        components.path = endpoint.path.value
-        try endpoint.parameterEncoder.encode(self.queryParams, into: &components)
-        // 2. Build URLRequest
-        guard let componentURL = components.url else {
-            throw URLError(.badURL)
-        }
-        var urlRequest = URLRequest(url: componentURL)
-        urlRequest.method = endpoint.method
-        
-        let headers = self.headers.merge(self.endpoint.api.defaultHeaders)
-        
-        let credentialHeaders = try endpoint.credentialsEncoder.encode(self.credentials)
-        
-        urlRequest.headers = headers.merge(credentialHeaders, preferExisting: false)
-        try endpoint.bodyEncoder.encode(self.body, into: &urlRequest)
-        
-        return urlRequest
-    }
-}
 

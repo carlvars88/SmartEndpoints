@@ -1,6 +1,6 @@
 //
-//  File.swift
-//  SmartEndpoins
+//  FormURLEncodedBodyEncoder.swift
+//  SmartEndpoints
 //
 //  Created by MacBook Pro on 8/22/25.
 //
@@ -23,24 +23,9 @@ public struct FormURLEncodedBodyEncoder<B: Encodable & Sendable>: RequestBodyEnc
     }
 
     public func encode(_ body: B, into urlRequest: inout URLRequest) throws {
-        // Short-circuit for None
-        if B.self is None.Type { return }
-
-        let dict = try DictionaryEncoder().encode(body)
-
-        // Flatten to [(name,value)] (arrays => repeated keys)
-        var pairs: [(String, String)] = []
-        for (k, v) in dict {
-            if let arr = v as? [Any] {
-                for item in arr { pairs.append((k, String(describing: item))) }
-            } else {
-                pairs.append((k, String(describing: v)))
-            }
-        }
-
-        // Build percent-encoded query string manually
+        let pairs = try KeyValueEncoder().encode(body)
         let query = pairs
-            .map { pctEncode($0.0) + "=" + pctEncode($0.1) }
+            .map { pctEncode($0.key) + "=" + pctEncode($0.value) }
             .joined(separator: "&")
 
         guard let httpBody = query.data(using: .utf8) else {

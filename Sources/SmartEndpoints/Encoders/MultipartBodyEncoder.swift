@@ -1,6 +1,6 @@
 //
-//  File.swift
-//  SmartEndpoins
+//  MultipartBodyEncoder.swift
+//  SmartEndpoints
 //
 //  Created by MacBook Pro on 8/22/25.
 //
@@ -15,20 +15,33 @@ public struct MultipartFile: Sendable {
     }
 }
 
+public struct MultipartParts: Sendable, BodyEncodable {
+    public let fields: [KeyValuePair]
+    public let files: [MultipartFile]
+
+    public init(fields: [KeyValuePair] = [], files: [MultipartFile] = []) {
+        self.fields = fields
+        self.files = files
+    }
+
+    public static var bodyEncoder: MultipartBodyEncoder { .shared }
+}
+
 public struct MultipartBodyEncoder: RequestBodyEncoder {
-    public typealias Parts = (fields: [(String, String)], files: [MultipartFile])
-    
     public static let shared = Self()
-    
-    public func encode(_ body: Parts, into urlRequest: inout URLRequest) throws {
+
+    public func encode(_ body: MultipartParts, into urlRequest: inout URLRequest) throws {
         let boundary = "Boundary-\(UUID().uuidString)"
         var data = Data()
-        func append(_ s: String) { data.append(s.data(using: .utf8)!) }
+        func append(_ s: String) {
+            guard let encoded = s.data(using: .utf8) else { return }
+            data.append(encoded)
+        }
 
-        for (k, v) in body.fields {
+        for pair in body.fields {
             append("--\(boundary)\r\n")
-            append("Content-Disposition: form-data; name=\"\(k)\"\r\n\r\n")
-            append("\(v)\r\n")
+            append("Content-Disposition: form-data; name=\"\(pair.key)\"\r\n\r\n")
+            append("\(pair.value)\r\n")
         }
         for f in body.files {
             append("--\(boundary)\r\n")
