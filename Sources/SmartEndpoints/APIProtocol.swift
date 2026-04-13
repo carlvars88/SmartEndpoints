@@ -8,7 +8,7 @@
 import Foundation
 
 public protocol APIProtocol: Sendable {
-    associatedtype Credentials: CredentialsEncodable
+    associatedtype Credentials: CredentialsEncodable = None
     static var baseUrl: String { get }
     static var defaultHeaders: HTTPHeaders { get }
 }
