@@ -16,7 +16,7 @@
 /// unless you declare them yourself.
 @attached(member, names: named(method), named(path), named(Parameters), named(Body))
 @attached(extension, conformances: Endpoint)
-public macro endpoint(_ method: HTTPMethod, _ path: StaticString) = #externalMacro(
+public macro endpoint(_ method: StaticString, _ path: StaticString) = #externalMacro(
     module: "SmartEndpointsMacrosImpl",
     type:   "EndpointMacro"
 )

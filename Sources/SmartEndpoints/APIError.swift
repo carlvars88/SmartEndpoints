@@ -10,7 +10,7 @@ import Foundation
 public enum APIError: Error {
     case http(status: Int, payload: String?)
     case invalidURL
-    case bodyNotAllowed(HTTPMethod)
+    case bodyNotAllowed(String)
     case encodingFailed(any Error)
     case decodingFailed(any Error)
 }

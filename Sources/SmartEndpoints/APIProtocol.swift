@@ -10,11 +10,9 @@ import Foundation
 public protocol APIProtocol: Sendable {
     associatedtype Credentials: CredentialsEncodable = None
     static var baseUrl: String { get }
-    static var defaultHeaders: HTTPHeaders { get }
+    static var defaultHeaders: [String: String] { get }
 }
 
 public extension APIProtocol {
-    static var defaultHeaders: HTTPHeaders {
-        .init()
-    }
+    static var defaultHeaders: [String: String] { [:] }
 }

@@ -13,14 +13,14 @@ public struct Request<E: Endpoint>: Sendable {
     public let queryParams: E.Parameters
     public let body: E.Body
     public let credentials: E.Credentials
-    public let headers: HTTPHeaders
+    public let headers: [String: String]
 
     public let parameterEncoder: E.Parameters.ParameterEncoder
     public let bodyEncoder: E.Body.BodyEncoder
     public let credentialsEncoder: E.Credentials.CredentialsEncoder
     public let resultDecoder: E.Result.ResultDecoder
 
-    public init(endpoint: E, queryParams: E.Parameters, body: E.Body, credentials: E.Credentials, headers: HTTPHeaders = .init()) {
+    public init(endpoint: E, queryParams: E.Parameters, body: E.Body, credentials: E.Credentials, headers: [String: String] = [:]) {
         self.endpoint = endpoint
         self.queryParams = queryParams
         self.body = body
@@ -51,22 +51,28 @@ extension Request {
             throw APIError.invalidURL
         }
         var urlRequest = URLRequest(url: componentURL)
-        urlRequest.method = endpoint.method
+        urlRequest.httpMethod = endpoint.method
 
         // Build base headers: API defaults, with decoder's Accept applied on top
-        var baseHeaders = self.endpoint.api.defaultHeaders
+        var mergedHeaders = self.endpoint.api.defaultHeaders
         if let acceptValue = self.resultDecoder.acceptHeader {
-            baseHeaders.update(name: "Accept", value: acceptValue)
+            mergedHeaders["Accept"] = acceptValue
         }
-
-        // Merge with request-specific headers (request headers have highest precedence)
-        let headers = self.headers.merge(baseHeaders)
-        urlRequest.headers = headers
+        // Request-level headers take precedence over base headers
+        for (name, value) in self.headers {
+            mergedHeaders[name] = value
+        }
+        urlRequest.allHTTPHeaderFields = mergedHeaders
 
         // Encode credentials and body (these may override headers if needed)
         try wrapping { try self.credentialsEncoder.encode(self.credentials, into: &urlRequest) }
         try wrapping { try self.bodyEncoder.encode(self.body, into: &urlRequest) }
-        try urlRequest.validate()
+
+        // Validate method/body combination
+        let bodyForbidden = ["GET", "HEAD", "DELETE", "TRACE"]
+        if let method = urlRequest.httpMethod, bodyForbidden.contains(method), urlRequest.httpBody != nil {
+            throw APIError.bodyNotAllowed(method)
+        }
         return urlRequest
     }
 }
@@ -82,7 +88,7 @@ E.Parameters == None,
 E.Body == None,
 E.Credentials == None
 {
-    init(endpoint: E, headers: HTTPHeaders = .init()) {
+    init(endpoint: E, headers: [String: String] = [:]) {
         self.init(endpoint: endpoint,
                   queryParams: .init(),
                   body: .init(),
@@ -96,7 +102,7 @@ E.Parameters == None
 {
     init(endpoint: E, body: E.Body,
          credentials: E.Credentials,
-         headers: HTTPHeaders = .init()) {
+         headers: [String: String] = [:]) {
         self.init(endpoint: endpoint,
                   queryParams: .init(),
                   body: body,
@@ -111,7 +117,7 @@ E.Body == None
     init(endpoint: E,
          query: E.Parameters,
          credentials: E.Credentials,
-         headers: HTTPHeaders = .init()) {
+         headers: [String: String] = [:]) {
         self.init(endpoint: endpoint,
                   queryParams: query,
                   body: .init(),
@@ -127,7 +133,7 @@ E.Credentials == None
     init(endpoint: E,
          query:  E.Parameters,
          body: E.Body,
-         headers: HTTPHeaders = .init()) {
+         headers: [String: String] = [:]) {
         self.init(endpoint: endpoint,
                   queryParams: query,
                   body: body,
@@ -142,7 +148,7 @@ E.Body == None
 {
     init(endpoint: E,
          credentials: E.Credentials,
-         headers: HTTPHeaders = .init()) {
+         headers: [String: String] = [:]) {
         self.init(endpoint: endpoint,
                   queryParams: None(),
                   body: None(),
@@ -157,7 +163,7 @@ E.Credentials == None
 {
     init(endpoint: E,
          body: E.Body,
-         headers: HTTPHeaders = .init()) {
+         headers: [String: String] = [:]) {
         self.init(endpoint: endpoint,
                   queryParams: None(),
                   body: body,
@@ -173,7 +179,7 @@ E.Credentials == None
 {
     init(endpoint: E,
          queryParams: E.Parameters,
-         headers: HTTPHeaders = .init()) {
+         headers: [String: String] = [:]) {
         self.init(endpoint: endpoint,
                   queryParams: queryParams,
                   body: None(),

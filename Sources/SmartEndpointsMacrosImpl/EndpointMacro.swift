@@ -67,7 +67,7 @@ struct EndpointExpansion {
         let existingAliases = existingTypealiasNames(in: declaration)
         var members: [DeclSyntax] = []
 
-        members.append("var method: HTTPMethod { .\(raw: httpMethod) }")
+        members.append("var method: String { \"\(raw: httpMethod.uppercased())\" }")
         members.append("\(raw: makePathDecl())")
 
         if !existingAliases.contains("Parameters") {
@@ -108,16 +108,17 @@ struct EndpointExpansion {
     }
 
     /// Extracts the HTTP method name from the FIRST argument of @endpoint.
-    /// `.get` → "get",  `HTTPMethod.post` → "post"
+    /// `"GET"` → "GET",  `"get"` → "GET"
     static func extractMethod(from node: AttributeSyntax) throws -> String {
         guard
             let argList = node.arguments?.as(LabeledExprListSyntax.self),
             let first = argList.first,
-            let memberAccess = first.expression.as(MemberAccessExprSyntax.self)
+            let stringLit = first.expression.as(StringLiteralExprSyntax.self),
+            let segment = stringLit.segments.first?.as(StringSegmentSyntax.self)
         else {
-            throw MacroError("Method argument must be a member access expression (e.g. .get)")
+            throw MacroError("Method argument must be a string literal (e.g. \"GET\")")
         }
-        return memberAccess.declName.baseName.text
+        return segment.content.text.uppercased()
     }
 
     // MARK: Private helpers
