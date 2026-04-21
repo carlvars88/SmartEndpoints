@@ -16,7 +16,7 @@ public protocol Endpoint: Sendable {
 
     var api: API.Type { get }
     var path: Path { get }
-    var method: HTTPMethod { get }
+    var method: String { get }
 }
 
 extension Endpoint {
