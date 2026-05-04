@@ -14,12 +14,14 @@ public protocol RequestCredentialsEncoder<Credentials>: Sendable where Credentia
 }
 
 public struct BearerCredentialsEncoder: RequestCredentialsEncoder, Sendable {
+    public init() {}
     public func encode(_ credentials: BearerCredentials, into request: inout URLRequest) throws {
         request.setValue("Bearer \(credentials.value)", forHTTPHeaderField: "Authorization")
     }
 }
 
 public struct BasicCredentialsEncoder: RequestCredentialsEncoder, Sendable {
+    public init() {}
     public func encode(_ credentials: BasicCredentials, into request: inout URLRequest) throws {
         guard let data = "\(credentials.username):\(credentials.password)".data(using: .utf8) else {
             throw EncodingError.invalidValue(credentials, 

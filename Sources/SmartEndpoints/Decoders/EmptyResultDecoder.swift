@@ -8,6 +8,7 @@
 import Foundation
 
 public struct EmptyResponseDecoder: ResponseDecoder {
+    public init() {}
     public let acceptHeader: String? = nil
     
     public func decode(_ data: Data, _ response: HTTPURLResponse) throws -> Empty {

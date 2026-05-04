@@ -8,6 +8,8 @@
 import Foundation
 
 public struct FormURLEncodedBodyEncoder<B: Encodable & Sendable>: RequestBodyEncoder, Sendable {
+    public init() {}
+
     // RFC 3986 unreserved: ALPHA / DIGIT / "-" / "." / "_" / "~"
     private let unreserved = CharacterSet.alphanumerics.union(.init(charactersIn: "-._~"))
 

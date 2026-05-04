@@ -8,6 +8,7 @@
 import Foundation
 
 public struct PlainTextDecoder: ResponseDecoder {
+    public init() {}
     public static let shared = Self()
     
     public let acceptHeader: String? = "text/plain"

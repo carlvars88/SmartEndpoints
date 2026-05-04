@@ -8,6 +8,8 @@
 import Foundation
 
 public struct JSONBodyEncoder<B: Encodable & Sendable>: RequestBodyEncoder, Sendable {
+    public init() {}
+
     public func encode(_ body: B, into urlRequest: inout URLRequest) throws {
         urlRequest.httpBody = try JSONEncoder().encode(body)
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")

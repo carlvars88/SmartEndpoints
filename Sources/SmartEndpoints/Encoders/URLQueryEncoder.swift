@@ -8,6 +8,8 @@
 import Foundation
 
 public struct URLQueryEncoder<P: Encodable & Sendable>: QueryParameterEncoder, Sendable {
+    public init() {}
+
     public func encode(_ params: P, into components: inout URLComponents) throws {
         let pairs = try KeyValueEncoder().encode(params)
         var items = components.queryItems ?? []

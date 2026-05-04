@@ -28,6 +28,7 @@ public struct MultipartParts: Sendable, BodyEncodable {
 }
 
 public struct MultipartBodyEncoder: RequestBodyEncoder {
+    public init() {}
     public static let shared = Self()
 
     public func encode(_ body: MultipartParts, into urlRequest: inout URLRequest) throws {
