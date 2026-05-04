@@ -10,6 +10,10 @@ import Foundation
 public struct KeyValuePair: Equatable, Sendable {
     public let key: String
     public let value: String
+    public init(key: String, value: String) {
+        self.key = key
+        self.value = value
+    }
 }
 
 /// Encodes a flat `Encodable` value into an ordered list of `KeyValuePair`s,
