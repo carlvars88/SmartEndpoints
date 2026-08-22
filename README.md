@@ -100,6 +100,7 @@ Adds `@GET`, `@POST`, `@PUT`, `@PATCH`, `@DELETE`, and `@endpoint` macros. Requi
 - [Defining Endpoints](#defining-endpoints)
 - [Endpoint Macros](#endpoint-macros)
 - [Building Requests](#building-requests)
+- [Per-Request Base URL Override](#per-request-base-url-override)
 - [Using with URLSession](#using-with-urlsession)
 - [Using with Alamofire](#using-with-alamofire)
 - [Public vs. Authenticated APIs](#public-vs-authenticated-apis)
@@ -369,6 +370,28 @@ Request(endpoint: e, query: p, body: b)        // Credentials is None
 ```swift
 let urlRequest: URLRequest = try request.asURLRequest()
 ```
+
+---
+
+## Per-Request Base URL Override
+
+Every `Request` initialiser accepts an optional trailing `baseUrlOverride`. When set, it takes precedence over `endpoint.api.baseUrl` for that single request — the endpoint's declared `API` type, headers, and credentials are unaffected.
+
+```swift
+Request(endpoint: GetProduct(id: 42), baseUrlOverride: "https://staging.example.com")
+```
+
+This is useful when the base URL isn't known at compile time — e.g. fetched from a remote config service or switched at runtime between environments:
+
+```swift
+let request = Request(
+    endpoint: GetProduct(id: 42),
+    credentials: BearerCredential(value: token),
+    baseUrlOverride: RemoteConfig.shared.currentBaseUrl
+)
+```
+
+When omitted (or `nil`), behaviour is unchanged — the base URL comes from `endpoint.api.baseUrl` as usual.
 
 ---
 
