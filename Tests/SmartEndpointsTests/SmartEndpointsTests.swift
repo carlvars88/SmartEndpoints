@@ -19,8 +19,8 @@ private struct MockAPI: APIProtocol {
 private struct MockAPIWithDefaults: APIProtocol {
     typealias Credentials = None
     static let baseUrl = "https://api.example.com"
-    static var defaultHeaders: HTTPHeaders {
-        var h = HTTPHeaders()
+    static var defaultHeaders: [String: String] {
+        var h: [String: String] = [:]
         h["X-Version"] = "2"
         h["Accept"] = "application/xml"   // should be overridden by decoder
         return h
@@ -70,7 +70,7 @@ private struct GetItemsEndpoint: Endpoint {
     typealias Body = None
     typealias API = MockAPI
     var path: Path { Path("/items") }
-    var method: HTTPMethod { .get }
+    var method: String { "GET" }
 }
 
 private struct GetItemEndpoint: Endpoint {
@@ -80,7 +80,7 @@ private struct GetItemEndpoint: Endpoint {
     typealias API = MockAPI
     let id: Int
     var path: Path { Path("/items/:id", values: ["id": "\(id)"]) }
-    var method: HTTPMethod { .get }
+    var method: String { "GET" }
 }
 
 private struct SearchEndpoint: Endpoint {
@@ -89,7 +89,7 @@ private struct SearchEndpoint: Endpoint {
     typealias Body = None
     typealias API = MockAPI
     var path: Path { Path("/search") }
-    var method: HTTPMethod { .get }
+    var method: String { "GET" }
 }
 
 private struct CreateEndpoint: Endpoint {
@@ -98,7 +98,7 @@ private struct CreateEndpoint: Endpoint {
     typealias Body = JSONBody
     typealias API = MockAPI
     var path: Path { Path("/items") }
-    var method: HTTPMethod { .post }
+    var method: String { "POST" }
 }
 
 private struct FormEndpoint: Endpoint {
@@ -107,7 +107,7 @@ private struct FormEndpoint: Endpoint {
     typealias Body = FormBody
     typealias API = MockAPI
     var path: Path { Path("/login") }
-    var method: HTTPMethod { .post }
+    var method: String { "POST" }
 }
 
 private struct JSONResultEndpoint: Endpoint {
@@ -116,7 +116,7 @@ private struct JSONResultEndpoint: Endpoint {
     typealias Body = None
     typealias API = MockAPI
     var path: Path { Path("/items/1") }
-    var method: HTTPMethod { .get }
+    var method: String { "GET" }
 }
 
 // Uses MockAPIWithDefaults (Accept: application/xml) but result is JSON — decoder should win
@@ -126,7 +126,7 @@ private struct JSONResultWithDefaultsEndpoint: Endpoint {
     typealias Body = None
     typealias API = MockAPIWithDefaults
     var path: Path { Path("/items/1") }
-    var method: HTTPMethod { .get }
+    var method: String { "GET" }
 }
 
 private struct DefaultHeadersEndpoint: Endpoint {
@@ -135,7 +135,7 @@ private struct DefaultHeadersEndpoint: Endpoint {
     typealias Body = None
     typealias API = MockAPIWithDefaults
     var path: Path { Path("/items") }
-    var method: HTTPMethod { .get }
+    var method: String { "GET" }
 }
 
 private struct AuthEndpoint: Endpoint {
@@ -144,7 +144,7 @@ private struct AuthEndpoint: Endpoint {
     typealias Body = None
     typealias API = AuthAPI
     var path: Path { Path("/me") }
-    var method: HTTPMethod { .get }
+    var method: String { "GET" }
 }
 
 private struct BasicAuthEndpoint: Endpoint {
@@ -153,7 +153,7 @@ private struct BasicAuthEndpoint: Endpoint {
     typealias Body = None
     typealias API = BasicAuthAPI
     var path: Path { Path("/me") }
-    var method: HTTPMethod { .get }
+    var method: String { "GET" }
 }
 
 private struct InvalidURLEndpoint: Endpoint {
@@ -162,7 +162,7 @@ private struct InvalidURLEndpoint: Endpoint {
     typealias Body = None
     typealias API = InvalidAPI
     var path: Path { Path("/items") }
-    var method: HTTPMethod { .get }
+    var method: String { "GET" }
 }
 
 // Endpoints for validation tests — method has body but shouldn't
@@ -172,7 +172,7 @@ private struct GetWithBodyEndpoint: Endpoint {
     typealias Body = JSONBody
     typealias API = MockAPI
     var path: Path { Path("/bad") }
-    var method: HTTPMethod { .get }
+    var method: String { "GET" }
 }
 
 private struct HeadWithBodyEndpoint: Endpoint {
@@ -181,7 +181,7 @@ private struct HeadWithBodyEndpoint: Endpoint {
     typealias Body = JSONBody
     typealias API = MockAPI
     var path: Path { Path("/bad") }
-    var method: HTTPMethod { .head }
+    var method: String { "HEAD" }
 }
 
 private struct DeleteWithBodyEndpoint: Endpoint {
@@ -190,7 +190,7 @@ private struct DeleteWithBodyEndpoint: Endpoint {
     typealias Body = JSONBody
     typealias API = MockAPI
     var path: Path { Path("/bad") }
-    var method: HTTPMethod { .delete }
+    var method: String { "DELETE" }
 }
 
 private struct TraceWithBodyEndpoint: Endpoint {
@@ -199,7 +199,7 @@ private struct TraceWithBodyEndpoint: Endpoint {
     typealias Body = JSONBody
     typealias API = MockAPI
     var path: Path { Path("/bad") }
-    var method: HTTPMethod { .trace }
+    var method: String { "TRACE" }
 }
 
 // Credential override — public endpoint on an otherwise-authenticated API
@@ -210,7 +210,7 @@ private struct PublicEndpointOnAuthAPI: Endpoint {
     typealias API = AuthAPI
     typealias Credentials = None        // override
     var path: Path { Path("/public") }
-    var method: HTTPMethod { .get }
+    var method: String { "GET" }
 }
 
 // Fixtures for error surface tests
@@ -230,7 +230,7 @@ private struct FailingBodyEndpoint: Endpoint {
     typealias Body = FailingBody
     typealias API = MockAPI
     var path: Path { Path("/fail") }
-    var method: HTTPMethod { .post }
+    var method: String { "POST" }
 }
 
 // MARK: - URLSession convenience (test-only)
@@ -291,8 +291,8 @@ struct URLBuildingTests {
     func testHTTPMethod() throws {
         let getReq  = try Request(endpoint: GetItemsEndpoint()).asURLRequest()
         let postReq = try Request(endpoint: CreateEndpoint(), body: JSONBody(name: "x", count: 1)).asURLRequest()
-        #expect(getReq.method  == .get)
-        #expect(postReq.method == .post)
+        #expect(getReq.httpMethod  == "GET")
+        #expect(postReq.httpMethod == "POST")
     }
 
     @Test("Appends query parameters")
@@ -347,7 +347,7 @@ struct HeaderTests {
 
     @Test("Request headers override API defaults")
     func testRequestHeadersOverrideAPIDefaults() throws {
-        var custom = HTTPHeaders()
+        var custom: [String: String] = [:]
         custom["X-Version"] = "99"
         let req = try Request(endpoint: DefaultHeadersEndpoint(), headers: custom).asURLRequest()
         #expect(req.value(forHTTPHeaderField: "X-Version") == "99")
@@ -355,7 +355,7 @@ struct HeaderTests {
 
     @Test("Request headers and API defaults are merged")
     func testRequestAndAPIHeadersMerged() throws {
-        var custom = HTTPHeaders()
+        var custom: [String: String] = [:]
         custom["X-Request-ID"] = "abc"
         let req = try Request(endpoint: DefaultHeadersEndpoint(), headers: custom).asURLRequest()
         #expect(req.value(forHTTPHeaderField: "X-Version") == "2")
@@ -467,28 +467,28 @@ struct ValidationTests {
 
     @Test("GET with body throws bodyNotAllowed")
     func testGETBodyForbidden() {
-        #expect(throws: APIError.bodyNotAllowed(.get)) {
+        #expect(throws: APIError.bodyNotAllowed("GET")) {
             try Request(endpoint: GetWithBodyEndpoint(), body: body).asURLRequest()
         }
     }
 
     @Test("HEAD with body throws bodyNotAllowed")
     func testHEADBodyForbidden() {
-        #expect(throws: APIError.bodyNotAllowed(.head)) {
+        #expect(throws: APIError.bodyNotAllowed("HEAD")) {
             try Request(endpoint: HeadWithBodyEndpoint(), body: body).asURLRequest()
         }
     }
 
     @Test("DELETE with body throws bodyNotAllowed")
     func testDELETEBodyForbidden() {
-        #expect(throws: APIError.bodyNotAllowed(.delete)) {
+        #expect(throws: APIError.bodyNotAllowed("DELETE")) {
             try Request(endpoint: DeleteWithBodyEndpoint(), body: body).asURLRequest()
         }
     }
 
     @Test("TRACE with body throws bodyNotAllowed")
     func testTRACEBodyForbidden() {
-        #expect(throws: APIError.bodyNotAllowed(.trace)) {
+        #expect(throws: APIError.bodyNotAllowed("TRACE")) {
             try Request(endpoint: TraceWithBodyEndpoint(), body: body).asURLRequest()
         }
     }

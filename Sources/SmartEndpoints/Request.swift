@@ -19,8 +19,9 @@ public struct Request<E: Endpoint>: Sendable {
     public let bodyEncoder: E.Body.BodyEncoder
     public let credentialsEncoder: E.Credentials.CredentialsEncoder
     public let resultDecoder: E.Result.ResultDecoder
+    public let baseUrlOverride: String?
 
-    public init(endpoint: E, queryParams: E.Parameters, body: E.Body, credentials: E.Credentials, headers: [String: String] = [:]) {
+    public init(endpoint: E, queryParams: E.Parameters, body: E.Body, credentials: E.Credentials, headers: [String: String] = [:], baseUrlOverride: String? = nil) {
         self.endpoint = endpoint
         self.queryParams = queryParams
         self.body = body
@@ -30,6 +31,7 @@ public struct Request<E: Endpoint>: Sendable {
         self.bodyEncoder = E.Body.bodyEncoder
         self.credentialsEncoder = E.Credentials.credentialsEncoder
         self.resultDecoder = E.Result.resultDecoder
+        self.baseUrlOverride = baseUrlOverride
     }
 }
 
@@ -37,7 +39,8 @@ extension Request {
     public func asURLRequest() throws -> URLRequest {
         let endpoint = self.endpoint
 
-        guard let url = URL(string: self.endpoint.api.baseUrl), url.host != nil else {
+        let resolvedBaseUrl = self.baseUrlOverride ?? self.endpoint.api.baseUrl
+        guard let url = URL(string: resolvedBaseUrl), url.host != nil else {
             throw APIError.invalidURL
         }
 
@@ -88,12 +91,13 @@ E.Parameters == None,
 E.Body == None,
 E.Credentials == None
 {
-    init(endpoint: E, headers: [String: String] = [:]) {
+    init(endpoint: E, headers: [String: String] = [:], baseUrlOverride: String? = nil) {
         self.init(endpoint: endpoint,
                   queryParams: .init(),
                   body: .init(),
                   credentials: .init(),
-                  headers: headers)
+                  headers: headers,
+                  baseUrlOverride: baseUrlOverride)
     }
 }
 
@@ -102,12 +106,14 @@ E.Parameters == None
 {
     init(endpoint: E, body: E.Body,
          credentials: E.Credentials,
-         headers: [String: String] = [:]) {
+         headers: [String: String] = [:],
+         baseUrlOverride: String? = nil) {
         self.init(endpoint: endpoint,
                   queryParams: .init(),
                   body: body,
                   credentials: credentials,
-                  headers: headers)
+                  headers: headers,
+                  baseUrlOverride: baseUrlOverride)
     }
 }
 
@@ -117,12 +123,14 @@ E.Body == None
     init(endpoint: E,
          query: E.Parameters,
          credentials: E.Credentials,
-         headers: [String: String] = [:]) {
+         headers: [String: String] = [:],
+         baseUrlOverride: String? = nil) {
         self.init(endpoint: endpoint,
                   queryParams: query,
                   body: .init(),
                   credentials: credentials,
-                  headers: headers)
+                  headers: headers,
+                  baseUrlOverride: baseUrlOverride)
     }
 }
 
@@ -133,12 +141,14 @@ E.Credentials == None
     init(endpoint: E,
          query:  E.Parameters,
          body: E.Body,
-         headers: [String: String] = [:]) {
+         headers: [String: String] = [:],
+         baseUrlOverride: String? = nil) {
         self.init(endpoint: endpoint,
                   queryParams: query,
                   body: body,
                   credentials: .init(),
-                  headers: headers)
+                  headers: headers,
+                  baseUrlOverride: baseUrlOverride)
     }
 }
 
@@ -148,12 +158,14 @@ E.Body == None
 {
     init(endpoint: E,
          credentials: E.Credentials,
-         headers: [String: String] = [:]) {
+         headers: [String: String] = [:],
+         baseUrlOverride: String? = nil) {
         self.init(endpoint: endpoint,
                   queryParams: None(),
                   body: None(),
                   credentials: credentials,
-                  headers: headers)
+                  headers: headers,
+                  baseUrlOverride: baseUrlOverride)
     }
 }
 
@@ -163,12 +175,14 @@ E.Credentials == None
 {
     init(endpoint: E,
          body: E.Body,
-         headers: [String: String] = [:]) {
+         headers: [String: String] = [:],
+         baseUrlOverride: String? = nil) {
         self.init(endpoint: endpoint,
                   queryParams: None(),
                   body: body,
                   credentials: None(),
-                  headers: headers)
+                  headers: headers,
+                  baseUrlOverride: baseUrlOverride)
     }
 }
 
@@ -179,12 +193,14 @@ E.Credentials == None
 {
     init(endpoint: E,
          queryParams: E.Parameters,
-         headers: [String: String] = [:]) {
+         headers: [String: String] = [:],
+         baseUrlOverride: String? = nil) {
         self.init(endpoint: endpoint,
                   queryParams: queryParams,
                   body: None(),
                   credentials: None(),
-                  headers: headers)
+                  headers: headers,
+                  baseUrlOverride: baseUrlOverride)
     }
 }
 

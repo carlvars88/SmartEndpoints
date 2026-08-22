@@ -74,7 +74,7 @@ private struct DeleteProduct {
 }
 
 // @endpoint with explicit method
-@endpoint(.post, "/orders")
+@endpoint("POST", "/orders")
 private struct CreateOrder {
     typealias API    = TestAPI
     typealias Result = Empty
@@ -85,12 +85,12 @@ private struct CreateOrder {
 
 @Suite("Macro expansion — method")
 struct MethodTests {
-    @Test func get()    { #expect(ListProducts().method    == .get)    }
-    @Test func post()   { #expect(CreateProduct().method  == .post)   }
-    @Test func put()    { #expect(UpdateProduct(id: 1).method == .put) }
-    @Test func patch()  { #expect(PatchProduct(id: 1).method == .patch) }
-    @Test func delete() { #expect(DeleteProduct(id: 1).method == .delete) }
-    @Test func explicitEndpointMacro() { #expect(CreateOrder().method == .post) }
+    @Test func get()    { #expect(ListProducts().method    == "GET")    }
+    @Test func post()   { #expect(CreateProduct().method  == "POST")   }
+    @Test func put()    { #expect(UpdateProduct(id: 1).method == "PUT") }
+    @Test func patch()  { #expect(PatchProduct(id: 1).method == "PATCH") }
+    @Test func delete() { #expect(DeleteProduct(id: 1).method == "DELETE") }
+    @Test func explicitEndpointMacro() { #expect(CreateOrder().method == "POST") }
 }
 
 @Suite("Macro expansion — path")
