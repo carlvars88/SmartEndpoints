@@ -2,9 +2,9 @@
 
 SmartEndpoints is a Swift library for defining API endpoints in a type-safe, protocol-oriented way. It replaces the common pattern of modelling endpoints as a single enum — popularised by [Moya](https://github.com/Moya/Moya) — with a design where every endpoint is its own type, and the compiler enforces the correct encoder/decoder for every request component.
 
-- **Platforms:** iOS 15+, macOS 12+
+- **Platforms:** iOS 16+, macOS 13+
 - **Swift:** 6.0+
-- **Core dependencies:** none (Foundation only)
+- **Core dependencies:** [NetworkingCore](https://github.com/carlvars88/NetworkingCore) — a zero-dependency `HTTPTransport` protocol, used only for the optional `execute(_:)` convenience (see [Using with NetworkingCore](#using-with-networkingcore))
 
 ---
 
@@ -58,7 +58,9 @@ The compiler resolves the correct encoder/decoder for `Result`, `Parameters`, `B
 
 ## Installation
 
-### Core library (no dependencies)
+### Core library
+
+Pulls in [NetworkingCore](https://github.com/carlvars88/NetworkingCore) (a protocol-only `HTTPTransport` contract, no further dependencies of its own) for the optional `execute(_:)` transport helpers. Nothing else is required — `Request.asURLRequest()` and everything else works with just `Foundation`.
 
 ```swift
 // Package.swift
@@ -102,6 +104,7 @@ Adds `@GET`, `@POST`, `@PUT`, `@PATCH`, `@DELETE`, and `@endpoint` macros. Requi
 - [Building Requests](#building-requests)
 - [Per-Request Base URL Override](#per-request-base-url-override)
 - [Using with URLSession](#using-with-urlsession)
+- [Using with NetworkingCore](#using-with-networkingcore)
 - [Using with Alamofire](#using-with-alamofire)
 - [Public vs. Authenticated APIs](#public-vs-authenticated-apis)
 - [Per-Endpoint Credential Override](#per-endpoint-credential-override)
@@ -419,6 +422,35 @@ func send<E: Endpoint>(_ request: Request<E>) async throws -> (E.Result, HTTPURL
     return (try E.Result.resultDecoder.decode(data, httpResponse), httpResponse)
 }
 ```
+
+---
+
+## Using with NetworkingCore
+
+SmartEndpoints ships an `execute(_:)` convenience on [NetworkingCore](https://github.com/carlvars88/NetworkingCore)'s `HTTPTransport` protocol, so any transport your app already has can send a `Request` and get back a decoded `E.Result` directly — no manual `asURLRequest()` / decode plumbing needed.
+
+```swift
+import NetworkingCore
+
+let transport: HTTPTransport = MyURLSessionTransport()
+
+let product = try await transport.execute(
+    Request(endpoint: GetProduct(id: 42), credentials: BearerCredential(value: token))
+)
+```
+
+### Authenticated transports
+
+If your transport conforms to `AuthenticatedHTTPTransport` (NetworkingCore's marker protocol for transports that already inject authentication themselves — see your app's session/auth stack), `execute(_:)` automatically skips encoding the endpoint's own `Credentials`, so auth isn't applied twice:
+
+```swift
+let authenticatedTransport: AuthenticatedHTTPTransport = ...
+
+// No credentials needed here — the transport already authenticates every request it sends.
+let profile = try await authenticatedTransport.execute(Request(endpoint: GetProfileEndpoint()))
+```
+
+Both overloads resolve automatically based on the static type of your transport — plain `HTTPTransport` encodes `Credentials` as usual; `AuthenticatedHTTPTransport` does not.
 
 ---
 

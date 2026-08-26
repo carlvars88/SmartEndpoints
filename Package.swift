@@ -4,7 +4,7 @@ import CompilerPluginSupport
 
 let package = Package(
     name: "SmartEndpoints",
-    platforms: [.iOS(.v15), .macOS(.v12)],
+    platforms: [.iOS(.v16), .macOS(.v13)],
     products: [
         .library(name: "SmartEndpoints", targets: ["SmartEndpoints"]),
         // Opt-in product: adds @GET, @POST, @endpoint etc. macros.
@@ -13,9 +13,15 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-syntax", from: "601.0.0"),
+        .package(url: "https://github.com/carlvars88/NetworkingCore", branch: "main"),
     ],
     targets: [
-        .target(name: "SmartEndpoints"),
+        .target(
+            name: "SmartEndpoints",
+            dependencies: [
+                .product(name: "NetworkingCore", package: "NetworkingCore"),
+            ]
+        ),
 
         // Macro implementation — compiled as a compiler plug-in, never linked into the app.
         .macro(
@@ -33,10 +39,12 @@ let package = Package(
             name: "SmartEndpointsMacros",
             dependencies: ["SmartEndpoints", "SmartEndpointsMacrosImpl"]
         ),
-
         .testTarget(
             name: "SmartEndpointsTests",
-            dependencies: ["SmartEndpoints"]
+            dependencies: [
+                "SmartEndpoints",
+                .product(name: "NetworkingCore", package: "NetworkingCore"),
+            ]
         ),
         .testTarget(
             name: "SmartEndpointsMacrosTests",

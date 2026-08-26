@@ -36,7 +36,22 @@ public struct Request<E: Endpoint>: Sendable {
 }
 
 extension Request {
+    /// Builds the `URLRequest`, encoding the endpoint's own `Credentials`.
+    ///
+    /// Use this when the transport does not already handle authentication itself.
     public func asURLRequest() throws -> URLRequest {
+        try buildURLRequest(encodingCredentials: true)
+    }
+
+    /// Builds the `URLRequest` without encoding the endpoint's own `Credentials`.
+    ///
+    /// Use this with a transport that already injects authentication (e.g. an
+    /// `AuthenticatedHTTPTransport`), so credentials aren't applied twice.
+    func asUnauthenticatedURLRequest() throws -> URLRequest {
+        try buildURLRequest(encodingCredentials: false)
+    }
+
+    private func buildURLRequest(encodingCredentials: Bool) throws -> URLRequest {
         let endpoint = self.endpoint
 
         let resolvedBaseUrl = self.baseUrlOverride ?? self.endpoint.api.baseUrl
@@ -68,7 +83,9 @@ extension Request {
         urlRequest.allHTTPHeaderFields = mergedHeaders
 
         // Encode credentials and body (these may override headers if needed)
-        try wrapping { try self.credentialsEncoder.encode(self.credentials, into: &urlRequest) }
+        if encodingCredentials {
+            try wrapping { try self.credentialsEncoder.encode(self.credentials, into: &urlRequest) }
+        }
         try wrapping { try self.bodyEncoder.encode(self.body, into: &urlRequest) }
 
         // Validate method/body combination

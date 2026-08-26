@@ -1,6 +1,15 @@
 {
-  "originHash" : "86710daa92caa36071b11318ef6cdce6112f3b778d99a66661d001f243ec417e",
+  "originHash" : "2467ec9ee734ac363b8c854c948607a067fd28273b484d2fd9a01b90747e47f1",
   "pins" : [
+    {
+      "identity" : "networkingcore",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/carlvars88/NetworkingCore",
+      "state" : {
+        "branch" : "main",
+        "revision" : "16bc44fd71abf27558627a9e3cb647b81756398f"
+      }
+    },
     {
       "identity" : "swift-syntax",
       "kind" : "remoteSourceControl",

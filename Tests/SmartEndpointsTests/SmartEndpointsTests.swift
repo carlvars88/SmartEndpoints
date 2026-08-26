@@ -7,6 +7,7 @@
 
 import Testing
 import Foundation
+import NetworkingCore
 @testable import SmartEndpoints
 
 // MARK: - Test fixtures
@@ -939,5 +940,49 @@ struct JSONResponseDecoderTests {
         let data = Data(#"{"first_name":"Alice"}"#.utf8)
         let result = try JSONResponseDecoder<Snake>(customDecoder: custom).decode(data, mockResponse())
         #expect(result == Snake(firstName: "Alice"))
+    }
+}
+
+// MARK: - HTTPTransport execute
+
+private actor RecordingTransport: HTTPTransport {
+    private(set) var lastRequest: URLRequest?
+
+    func performRequest<T: Sendable>(request: URLRequest, decode: @Sendable (Data, HTTPURLResponse) throws -> T) async throws -> T {
+        lastRequest = request
+        let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+        return try decode(Data(), response)
+    }
+}
+
+private actor RecordingAuthenticatedTransport: AuthenticatedHTTPTransport {
+    private(set) var lastRequest: URLRequest?
+
+    func performRequest<T: Sendable>(request: URLRequest, decode: @Sendable (Data, HTTPURLResponse) throws -> T) async throws -> T {
+        lastRequest = request
+        let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+        return try decode(Data(), response)
+    }
+}
+
+@Suite("HTTPTransport execute")
+struct HTTPTransportExecuteTests {
+
+    @Test("HTTPTransport.execute encodes the endpoint's own credentials")
+    func testPlainTransportEncodesCredentials() async throws {
+        let transport = RecordingTransport()
+        _ = try await transport.execute(Request(endpoint: AuthEndpoint(),
+                                                  credentials: BearerCredentials(value: "tok123")))
+        let lastRequest = await transport.lastRequest
+        #expect(lastRequest?.value(forHTTPHeaderField: "Authorization") == "Bearer tok123")
+    }
+
+    @Test("AuthenticatedHTTPTransport.execute skips the endpoint's own credentials")
+    func testAuthenticatedTransportSkipsCredentials() async throws {
+        let transport = RecordingAuthenticatedTransport()
+        _ = try await transport.execute(Request(endpoint: AuthEndpoint(),
+                                                  credentials: BearerCredentials(value: "tok123")))
+        let lastRequest = await transport.lastRequest
+        #expect(lastRequest?.value(forHTTPHeaderField: "Authorization") == nil)
     }
 }
