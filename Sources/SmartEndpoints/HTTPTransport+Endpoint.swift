@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import NetworkingCore
+@_exported import NetworkingCore
 
 public extension HTTPTransport {
     func execute<E: Endpoint>(_ request: Request<E>) async throws -> E.Result {
