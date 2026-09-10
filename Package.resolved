@@ -1,5 +1,5 @@
 {
-  "originHash" : "2467ec9ee734ac363b8c854c948607a067fd28273b484d2fd9a01b90747e47f1",
+  "originHash" : "731451c56a98df68a08677d274c8fd167a411bbfbc0b69bacae5d76a71b7af21",
   "pins" : [
     {
       "identity" : "networkingcore",
@@ -7,7 +7,7 @@
       "location" : "https://github.com/carlvars88/NetworkingCore",
       "state" : {
         "branch" : "main",
-        "revision" : "16bc44fd71abf27558627a9e3cb647b81756398f"
+        "revision" : "7aa7adfeea31eb98234d390d3c10c98bcb071760"
       }
     },
     {

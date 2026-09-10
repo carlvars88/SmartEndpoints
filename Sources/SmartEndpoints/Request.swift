@@ -47,7 +47,7 @@ extension Request {
     ///
     /// Use this with a transport that already injects authentication (e.g. an
     /// `AuthenticatedHTTPTransport`), so credentials aren't applied twice.
-    func asUnauthenticatedURLRequest() throws -> URLRequest {
+    public func asUnauthenticatedURLRequest() throws -> URLRequest {
         try buildURLRequest(encodingCredentials: false)
     }
 
